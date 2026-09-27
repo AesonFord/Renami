@@ -94,7 +94,7 @@ export function releaseFuses(releaseYml = readFileSync('electron-builder.release
   return fuses;
 }
 
-// @electron/fuses' FuseState bytes (dist/constants.js); the package doesn't export them.
+// @electron/fuses' FuseState bytes (dist/constants.js).
 const FUSE_STATES = { 48: 'disabled', 49: 'enabled', 114: 'removed', 144: 'inherited' };
 
 /** One message per fuse whose state in `wire` differs from `expected`. `options` is FuseV1Options. */

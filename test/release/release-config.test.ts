@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { fuseMismatches, installerNames, releaseFuses, unpackedApps } from '../../scripts/release-config.mjs';
@@ -103,5 +104,16 @@ describe('fuseMismatches', () => {
       'EnableCookieEncryption is missing from this Electron binary, expected enabled',
       'NoSuchFuse is not a fuse @electron/fuses knows',
     ]);
+  });
+});
+
+// Only the release workflow runs check-fuses.mjs, so a broken import would otherwise first show up
+// after every installer has been built.
+describe('check-fuses.mjs', () => {
+  it('loads with the installed @electron/fuses, and refuses a platform it does not know', () => {
+    const run = spawnSync(process.execPath, ['scripts/check-fuses.mjs', 'nope'], { encoding: 'utf8' });
+    expect(run.stderr).not.toContain('SyntaxError');
+    expect(run.stderr).toContain('Unknown platform nope; expected mac, win or linux');
+    expect(run.status).not.toBe(0);
   });
 });

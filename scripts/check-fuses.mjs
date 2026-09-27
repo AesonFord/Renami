@@ -1,10 +1,9 @@
 // Fails unless every unpacked app `npm run dist` built for a platform has the fuses that
 // electron-builder.release.yml sets. Guards against shipping from the base config by mistake.
 // Usage: node scripts/check-fuses.mjs <mac|win|linux>
-import fuses from '@electron/fuses';
+import { FuseV1Options, getCurrentFuseWire } from '@electron/fuses';
 import { fuseMismatches, releaseFuses, unpackedApps } from './release-config.mjs';
 
-const { getCurrentFuseWire, FuseV1Options } = fuses;
 const platform = process.argv[2];
 const expected = releaseFuses();
 let failed = false;
