@@ -45,7 +45,7 @@
     "electron": "44.4.3",
     "electron-builder": "^26.15.3",
     "electron-vite": "5.0.0",
-    "esbuild": "0.25.12",
+    "esbuild": "0.28.2",
     "jsdom": "^30.0.1",
     "pdfjs-dist": "^6.3.289",
     "react": "^19.3.0",
