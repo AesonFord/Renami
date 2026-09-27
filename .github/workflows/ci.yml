@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push to a PR cancels that PR's older run. Runs on main always finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      # Ubuntu 24.04 blocks the unprivileged user namespaces Chromium's sandbox needs.
+      - name: Allow Electron's sandbox
+        if: runner.os == 'Linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: End-to-end tests
+        if: runner.os != 'Linux'
+        run: npx playwright test
+      - name: End-to-end tests (virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npx playwright test
+      - name: Package (unpacked app only; installers are built by npm run dist)
+        # base config on purpose: e2e drives this build over --inspect (see electron-builder.release.yml)
+        run: npx electron-builder --dir --publish never
+      - name: Packaged app test
+        if: runner.os != 'Linux'
+        run: npx playwright test packaged
+        env:
+          RENAMI_PACKAGED: '1'
+      - name: Packaged app test (virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npx playwright test packaged
+        env:
+          RENAMI_PACKAGED: '1'
+      # Playwright writes each failure's details (error-context.md, traces) here; keep them.
+      - name: Upload end-to-end results
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: e2e-results-${{ matrix.os }}
+          path: test-results/
+          if-no-files-found: ignore

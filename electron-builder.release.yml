@@ -1,0 +1,14 @@
+# Release-only hardening on top of the base config. `npm run pack` (what e2e/packaged.spec.ts
+# drives) must NOT use this file: Playwright controls the packaged main process over --inspect,
+# which enableNodeCliInspectArguments=false turns off.
+extends: ./electron-builder.yml
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
+  # electron-builder skips asar integrity on Linux; that warning is expected, not a failure.
+  enableEmbeddedAsarIntegrityValidation: true
+  # Flipping fuses invalidates the mac signature; re-seal the ad-hoc ("-") identity afterwards.
+  resetAdHocDarwinSignature: true

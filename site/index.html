@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Renami</title>
+  <meta name="description" content="Rename files in bulk from one name pattern, with a live preview. For macOS, Windows and Linux.">
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <img class="logo" src="favicon.png" alt="" width="56" height="56">
+    <h1>Renami</h1>
+    <p class="pitch">Rename files in bulk. Drop in files and folders, write one name pattern, check the live preview, and rename. Renames can be undone until you quit.</p>
+    <div class="example">
+      <code class="pattern">Hawaii_{date_taken:YYYY-MM-DD}_{seq:3}</code>
+      <p><code>IMG_4821.jpg</code> <span aria-hidden="true">→</span><span class="visually-hidden">becomes</span> <code>Hawaii_2024-07-04_001.jpg</code></p>
+    </div>
+    <a class="cta" href="#download">Download</a>
+  </header>
+
+  <main>
+    <figure class="shot">
+      <img src="screenshot.png" alt="Renami's window: a folder of photos, each with its new name in the live preview" width="1200" height="760">
+    </figure>
+
+    <section id="download">
+      <h2>Download</h2>
+      <p>Free, for macOS, Windows and Linux. <a href="https://github.com/AesonFord/Renami/releases">Older versions and release notes</a>.</p>
+      <div class="platforms">
+        <div class="platform" data-os="mac">
+          <h3>macOS</h3>
+          <a class="button" href="https://github.com/AesonFord/Renami/releases/latest/download/Renami-mac-arm64.dmg">Apple Silicon <span>.dmg</span></a>
+          <a class="button" href="https://github.com/AesonFord/Renami/releases/latest/download/Renami-mac-x64.dmg">Intel <span>.dmg</span></a>
+          <p class="hint">Not sure? Apple menu → About This Mac → Chip or Processor.</p>
+        </div>
+        <div class="platform" data-os="windows">
+          <h3>Windows</h3>
+          <a class="button" href="https://github.com/AesonFord/Renami/releases/latest/download/Renami-win-x64-setup.exe">Installer <span>.exe</span></a>
+          <p class="hint">64-bit.</p>
+        </div>
+        <div class="platform" data-os="linux">
+          <h3>Linux</h3>
+          <a class="button" href="https://github.com/AesonFord/Renami/releases/latest/download/Renami-linux-amd64.deb">Debian, Ubuntu <span>.deb</span></a>
+          <a class="button" href="https://github.com/AesonFord/Renami/releases/latest/download/Renami-linux-x86_64.AppImage">Any distribution <span>.AppImage</span></a>
+          <p class="hint">64-bit x86.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="install">
+      <h2>First launch</h2>
+      <p>Renami isn't signed with an Apple or Microsoft certificate yet, so your system asks before the first launch. After that, it opens normally.</p>
+      <h3>macOS</h3>
+      <p>Open the .dmg and drag Renami to Applications. The first time you open it, macOS blocks it. Open System Settings, then Privacy &amp; Security, and click <strong>Open Anyway</strong>. On macOS 14 and earlier, right-click the app, then choose Open, is enough.</p>
+      <h3>Windows</h3>
+      <p>If SmartScreen says it protected your PC, click <strong>More info</strong>, then <strong>Run anyway</strong>.</p>
+      <h3>Linux</h3>
+      <p>On Ubuntu 24.04 and later, AppArmor's limit on unprivileged user namespaces can stop the AppImage from starting. Install the .deb instead, or allow the AppImage with an AppArmor profile.</p>
+    </section>
+  </main>
+
+  <footer>
+    <a href="https://github.com/AesonFord/Renami">Source on GitHub</a>
+    <a href="https://github.com/AesonFord/Renami/releases">Releases</a>
+    <span>GPL-3.0-or-later</span>
+  </footer>
+
+  <script>
+    // Moves the visitor's platform first. Without JavaScript, the order stays macOS, Windows, Linux.
+    (function () {
+      var ua = navigator.userAgent;
+      var os = /iPhone|iPad|Android/.test(ua) ? null
+        : /Mac/.test(ua) ? 'mac'
+        : /Windows/.test(ua) ? 'windows'
+        : /Linux/.test(ua) ? 'linux'
+        : null;
+      if (!os) return;
+      var list = document.querySelector('.platforms');
+      var mine = list.querySelector('[data-os="' + os + '"]');
+      list.insertBefore(mine, list.firstChild);
+      mine.classList.add('yours');
+    })();
+  </script>
+</body>
+</html>

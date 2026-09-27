@@ -1,0 +1,134 @@
+name: Release
+
+# A v* tag builds every installer and publishes them as one GitHub Release.
+# Run it by hand (Actions → Release → Run workflow) to build and check the installers as
+# downloadable artifacts without releasing anything.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# Every job asks for what it needs. Build jobs run third-party install scripts (npm ci), so
+# they get no write access and no OIDC token.
+permissions: {}
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    strategy:
+      # Every platform's error shows at once; any failure still blocks the release job.
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+            flags: --mac --arm64 --x64
+          - os: windows-latest
+            platform: win
+            flags: --win --x64
+          - os: ubuntu-latest
+            platform: linux
+            flags: --linux --x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      # First, so a tag that isn't on main fails in seconds instead of after three builds.
+      # "behind" or "identical" means the tagged commit is already part of main.
+      - name: Check the tag is on main
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status="$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$GITHUB_SHA" --jq .status)"
+          if [ "$status" != identical ] && [ "$status" != behind ]; then
+            echo "::error::Tag $GITHUB_REF_NAME is not on main (compare status: $status)"
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      # No npm cache: tag runs can read caches written from main, and a poisoned one would ship.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Check the tag matches package.json
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json's version ($expected)"
+            exit 1
+          fi
+      - run: npm run typecheck
+      # End-to-end tests run in ci.yml on every push to main; a release doesn't repeat them.
+      - run: npm test
+      # npm run dist builds from electron-builder.release.yml. Calling electron-builder directly
+      # would use the base config and ship without the fuses; check-fuses would then fail.
+      - run: npm run dist -- ${{ matrix.flags }}
+      - name: Check the fuses
+        run: node scripts/check-fuses.mjs ${{ matrix.platform }}
+      # Ubuntu 24.04 blocks the unprivileged user namespaces Chromium's sandbox needs.
+      - name: Allow Electron's sandbox
+        if: runner.os == 'Linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Launch the app
+        if: runner.os != 'Linux'
+        run: node scripts/smoke-launch.mjs ${{ matrix.platform }}
+      - name: Launch the app (virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node scripts/smoke-launch.mjs linux
+      - name: Collect the installers
+        run: node scripts/collect-installers.mjs ${{ matrix.platform }}
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: installers-${{ matrix.platform }}
+          path: installers/
+          if-no-files-found: error
+
+  # Runs only for a tag push, and only when every platform built and passed its checks. A manual
+  # run (workflow_dispatch), even one started from a tag, must never publish.
+  # It runs no npm code, so it is the only job trusted with write access and an OIDC token.
+  release:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: installers-*
+          path: installers
+          merge-multiple: true
+      - name: Write the checksums
+        working-directory: installers
+        run: sha256sum -- * > SHA256SUMS
+      # One Sigstore-signed SLSA provenance statement covering every installer and SHA256SUMS.
+      # Check a download with: gh attestation verify <file> --repo AesonFord/Renami
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+        with:
+          subject-path: installers/*
+      # Created as a draft and published only once every upload succeeded, so a failed upload
+      # never leaves a public release with installers missing.
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -l installers
+          # A version with a `-` (v0.2.0-beta.0) is a prerelease, so releases/latest/download/…
+          # keeps serving the last stable build instead of the beta.
+          prerelease=()
+          [[ "$GITHUB_REF_NAME" == *-* ]] && prerelease=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" installers/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            "${prerelease[@]}" \
+            --title "Renami ${GITHUB_REF_NAME#v}" \
+            --notes "First launch on macOS or Windows? See the [install notes](https://github.com/AesonFord/Renami#package-it). To check a download, see [SECURITY.md](https://github.com/AesonFord/Renami/blob/main/SECURITY.md#verifying-a-download)." \
+            --generate-notes
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false

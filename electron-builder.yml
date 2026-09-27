@@ -1,0 +1,63 @@
+# Installers: macOS .dmg, Windows NSIS, Linux AppImage and .deb.
+# File names have no version, so releases/latest/download/<name> always finds the newest.
+appId: app.renami
+productName: Renami
+directories:
+  output: dist
+files:
+  - out/**
+  - package.json
+# ExifTool is a real program, not JavaScript, so it must live outside the asar archive.
+# exiftool-vendored finds the unpacked copy by itself.
+asarUnpack:
+  - node_modules/exiftool-vendored*/**/*
+mac:
+  target: dmg
+  category: public.app-category.productivity
+  artifactName: "${productName}-mac-${arch}.${ext}"
+  icon: build/renami-logo.png
+  # v1 has no Developer ID signature and is not notarized. identity "-" signs it ad hoc,
+  # so the app's seal is intact and macOS asks before opening it instead of calling it damaged.
+  # Hardened runtime would reject Electron's own pre-signed frameworks under an ad-hoc signature.
+  identity: "-"
+  hardenedRuntime: false
+  # Folders and media dropped on the dock icon, and "Open With" in Finder, reach the app as
+  # open-file events (src/main/index.ts).
+  extendInfo:
+    CFBundleDocumentTypes:
+      - CFBundleTypeName: Folder
+        CFBundleTypeRole: Viewer
+        LSHandlerRank: None
+        LSItemContentTypes: [public.folder]
+      - CFBundleTypeName: Media file
+        CFBundleTypeRole: Viewer
+        LSHandlerRank: None
+        LSItemContentTypes: [public.image, public.movie, public.audio]
+    # Renaming in these locations triggers a macOS privacy prompt; these are its explanation lines.
+    NSDesktopFolderUsageDescription: Renami renames files where you drop them, including the Desktop.
+    NSDocumentsFolderUsageDescription: Renami renames files where you drop them, including Documents.
+    NSDownloadsFolderUsageDescription: Renami renames files where you drop them, including Downloads.
+    NSRemovableVolumesUsageDescription: Renami renames files on removable drives you drop into it.
+    NSNetworkVolumesUsageDescription: Renami renames files on network drives you drop into it.
+win:
+  target: nsis
+  icon: build/renami-logo.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: "${productName}-win-${arch}-setup.${ext}"
+  # Adds "Rename with Renami" to the Explorer context menu of folders (build/installer.nsh).
+  include: build/installer.nsh
+linux:
+  target: [AppImage, deb]
+  category: Utility
+  executableName: renami
+  icon: build/renami-logo.png
+  maintainer: Renami
+  # ${arch} is x86_64 for AppImage and amd64 for deb: each format's own spelling.
+  artifactName: "${productName}-linux-${arch}.${ext}"
+  # Lets file managers offer the app for folders ("Open With").
+  mimeTypes: [inode/directory]
+deb:
+  # electron-builder's defaults (app-builder-lib 26, FpmTarget) plus perl, which ExifTool needs on Linux.
+  depends: [libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0, libuuid1, libsecret-1-0, perl]

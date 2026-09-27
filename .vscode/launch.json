@@ -1,0 +1,46 @@
+{
+  // Debug configurations for the Electron app (electron-vite dev server).
+  // "Debug App" is the one to pick: it starts the main process and attaches to the renderer.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Main Process",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron-vite",
+      "windows": {
+        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron-vite.cmd"
+      },
+      "runtimeArgs": ["--sourcemap"],
+      "env": {
+        "REMOTE_DEBUGGING_PORT": "9222",
+        // VS Code is itself Electron and may leak this; if set, Electron starts as plain Node.
+        "ELECTRON_RUN_AS_NODE": null
+      },
+      "outFiles": ["${workspaceFolder}/out/**/*.{js,mjs,cjs}"],
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Debug Renderer Process",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "webRoot": "${workspaceFolder}/src/renderer",
+      "timeout": 60000,
+      "presentation": {
+        "hidden": true
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug App",
+      "configurations": ["Debug Main Process", "Debug Renderer Process"],
+      "stopAll": true,
+      "presentation": {
+        "order": 1
+      }
+    }
+  ]
+}

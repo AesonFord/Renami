@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Routine bumps wait until a release has been public for a week, so a hijacked release is
+    # usually caught before it's proposed. Security updates skip the wait.
+    cooldown:
+      default-days: 7
+    # Electron majors go EOL after three releases; the exact pin must keep moving.
+    groups:
+      electron:
+        patterns:
+          - electron
+          - electron-*
+          - "@electron/*"
+  # Keeps the SHA pins in .github/workflows current. It bumps the SHA and its # vN comment together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns:
+          - "*"
