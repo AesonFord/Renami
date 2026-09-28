@@ -1,12 +1,18 @@
 # Renami
 
+[![CI](https://github.com/AesonFord/Renami/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AesonFord/Renami/actions/workflows/ci.yml?query=branch%3Amain)
+[![Latest release](https://img.shields.io/github/v/release/AesonFord/Renami)](https://github.com/AesonFord/Renami/releases/latest)
+[![License: GPL-3.0-or-later](https://img.shields.io/github/license/AesonFord/Renami)](LICENSE)
+
 A desktop app for renaming files in bulk. Drop in files and folders, write one name pattern such as `Hawaii_{date_taken:YYYY-MM-DD}_{seq:3}`, check the live preview, and rename. Renames can be undone until you quit.
+
+![Renami renaming six photos with the pattern Hawaii_{date_taken:YYYY-MM-DD}_{seq:3}, showing the live preview of the new names](site/screenshot.png)
 
 Beyond patterns it can: number files in either direction with a step and a restart each day, month or year; edit names in the preview, drag rows into order, or import a list of names; find & replace on the current or the new name with regex backreferences; map extensions (`.jpeg` to `.jpg`); shift a wrong camera clock; use a date found in the file name; filter by name, size or date; rename the folders inside a folder; strip accents or force ASCII; and export the preview or a finished rename as CSV. Tokens include size, CRC32/MD5, aperture, shutter, frame rate, bitrate, composer and the parent folder.
 
 It runs on macOS, Windows and Linux, and reads photo, video and audio metadata with a bundled copy of ExifTool.
 
-**Download:** https://aesonford.github.io/Renami/
+**Download:** https://aesonford.github.io/Renami/, or pick a version on the [Releases](https://github.com/AesonFord/Renami/releases) page.
 
 ## Run it
 
@@ -99,6 +105,10 @@ Presets are stored in `presets.json` in the app's user data folder:
 - Linux: `~/.config/Renami`
 
 A date found in a file name (for example `IMG_20240102_101112`) is used when a file has no date taken, before falling back to the created or modified date. Turn it off on the File dates tab.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). To report a security problem, follow [SECURITY.md](SECURITY.md) instead of opening an issue.
 
 ## License
 
