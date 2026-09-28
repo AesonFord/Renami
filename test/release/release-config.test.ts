@@ -1,4 +1,6 @@
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { FuseState } from '@electron/fuses';
 import { describe, expect, it } from 'vitest';
 import { fuseMismatches, installerNames, releaseFuses, unpackedApps } from '../../scripts/release-config.mjs';
 
@@ -83,25 +85,34 @@ describe('releaseFuses', () => {
 });
 
 describe('fuseMismatches', () => {
-  const OPTIONS = { RunAsNode: 0, EnableCookieEncryption: 1 };
-  const DISABLED = 48;
-  const ENABLED = 49;
+  const FUSES = { FuseV1Options: { RunAsNode: 0, EnableCookieEncryption: 1 }, FuseState };
+  const { DISABLE: DISABLED, ENABLE: ENABLED } = FuseState;
 
   it('finds nothing when every fuse is as configured', () => {
-    expect(fuseMismatches({ 0: DISABLED, 1: ENABLED }, { RunAsNode: false, EnableCookieEncryption: true }, OPTIONS)).toEqual([]);
+    expect(fuseMismatches({ 0: DISABLED, 1: ENABLED }, { RunAsNode: false, EnableCookieEncryption: true }, FUSES)).toEqual([]);
   });
 
   it('names each fuse left in the wrong state', () => {
-    expect(fuseMismatches({ 0: ENABLED, 1: DISABLED }, { RunAsNode: false, EnableCookieEncryption: true }, OPTIONS)).toEqual([
+    expect(fuseMismatches({ 0: ENABLED, 1: DISABLED }, { RunAsNode: false, EnableCookieEncryption: true }, FUSES)).toEqual([
       'RunAsNode is enabled, expected disabled',
       'EnableCookieEncryption is disabled, expected enabled',
     ]);
   });
 
   it('reports a fuse the binary does not have, or one @electron/fuses does not know', () => {
-    expect(fuseMismatches({ 0: DISABLED }, { EnableCookieEncryption: true, NoSuchFuse: true }, OPTIONS)).toEqual([
+    expect(fuseMismatches({ 0: DISABLED }, { EnableCookieEncryption: true, NoSuchFuse: true }, FUSES)).toEqual([
       'EnableCookieEncryption is missing from this Electron binary, expected enabled',
       'NoSuchFuse is not a fuse @electron/fuses knows',
     ]);
+  });
+});
+
+// Only the release workflow runs check-fuses.mjs, so a broken import would otherwise first show up
+// after every installer has been built.
+describe('check-fuses.mjs', () => {
+  it('loads with the installed @electron/fuses, and refuses a platform it does not know', () => {
+    const run = spawnSync(process.execPath, ['scripts/check-fuses.mjs', 'nope'], { encoding: 'utf8' });
+    expect(run.stderr).toContain('Unknown platform nope; expected mac, win or linux');
+    expect(run.status).not.toBe(0);
   });
 });
