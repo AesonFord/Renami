@@ -94,21 +94,27 @@ export function releaseFuses(releaseYml = readFileSync('electron-builder.release
   return fuses;
 }
 
-// @electron/fuses' FuseState bytes (dist/constants.js); the package doesn't export them.
-const FUSE_STATES = { 48: 'disabled', 49: 'enabled', 114: 'removed', 144: 'inherited' };
-
-/** One message per fuse whose state in `wire` differs from `expected`. `options` is FuseV1Options. */
-export function fuseMismatches(wire, expected, options) {
+/**
+ * One message per fuse whose state in `wire` differs from `expected`. The caller passes
+ * @electron/fuses' FuseV1Options and FuseState, so this module stays dependency-free.
+ */
+export function fuseMismatches(wire, expected, { FuseV1Options, FuseState }) {
+  const states = {
+    [FuseState.DISABLE]: 'disabled',
+    [FuseState.ENABLE]: 'enabled',
+    [FuseState.REMOVED]: 'removed',
+    [FuseState.INHERIT]: 'inherited',
+  };
   const problems = [];
   for (const [name, enabled] of Object.entries(expected)) {
     const want = enabled ? 'enabled' : 'disabled';
-    const index = options[name];
+    const index = FuseV1Options[name];
     if (index === undefined) {
       problems.push(`${name} is not a fuse @electron/fuses knows`);
     } else if (wire[index] === undefined) {
       problems.push(`${name} is missing from this Electron binary, expected ${want}`);
-    } else if (FUSE_STATES[wire[index]] !== want) {
-      problems.push(`${name} is ${FUSE_STATES[wire[index]] ?? `byte ${wire[index]}`}, expected ${want}`);
+    } else if (states[wire[index]] !== want) {
+      problems.push(`${name} is ${states[wire[index]] ?? `byte ${wire[index]}`}, expected ${want}`);
     }
   }
   return problems;
