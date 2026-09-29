@@ -15,6 +15,13 @@ updates:
           - electron
           - electron-*
           - "@electron/*"
+    # electron-vite 5 only accepts vite 5-7, and @vitejs/plugin-react 6 needs vite 8. Hold both
+    # majors until a stable electron-vite supports vite 8, then upgrade the three together.
+    ignore:
+      - dependency-name: vite
+        versions: [">=8"]
+      - dependency-name: "@vitejs/plugin-react"
+        versions: [">=6"]
   # Keeps the SHA pins in .github/workflows current. It bumps the SHA and its # vN comment together.
   - package-ecosystem: github-actions
     directory: /
