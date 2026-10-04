@@ -25,7 +25,7 @@
     "dist": "electron-vite build && electron-builder --config electron-builder.release.yml --publish never"
   },
   "dependencies": {
-    "exiftool-vendored": "^38.1.0",
+    "exiftool-vendored": "^38.2.0",
     "heic-decode": "^2.1.0"
   },
   "devDependencies": {
