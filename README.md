@@ -35,7 +35,7 @@ Drop a folder or files on the app icon (macOS), choose the app in "Open With", o
 `renami` renames files from a terminal, a script or CI, with the same engine as the app. It needs Node 22 or later:
 
 ```bash
-npm install -g renami
+npm install -g @aesonford/renami
 ```
 
 It never changes anything without `--apply`:
@@ -123,9 +123,9 @@ The tag starts `.github/workflows/release.yml`. It checks the tag is on `main`, 
 
 If any platform fails, nothing is released. Release tags can't be deleted or moved, so fix it and release the next patch version the same way. Never tag the release branch: the squash merge gives `main` a different commit, and the tag would never be on `main`.
 
-Each release also packs the command line (`renami-<version>.tgz`, attached to the release) and publishes it to npm with [trusted publishing](https://docs.npmjs.com/trusted-publishers), so the repository holds no npm token. One-time setup:
+Each release also packs the command line (`aesonford-renami-<version>.tgz`, attached to the release) and publishes it to npm with [trusted publishing](https://docs.npmjs.com/trusted-publishers), so the repository holds no npm token. One-time setup:
 
-1. Publish the first version by hand: download `renami-<version>.tgz` from a release (or from a manual run's `cli-package` artifact), then run `npm publish renami-<version>.tgz --access public` while logged in to npm. Trusted publishing can only be set up on a package that exists. Check npm's docs in case this is no longer needed.
+1. Publish the first version by hand: download `aesonford-renami-<version>.tgz` from a release (or from a manual run's `cli-package` artifact), then run `npm publish aesonford-renami-<version>.tgz --access public` while logged in to npm. Trusted publishing can only be set up on a package that exists. Check npm's docs in case this is no longer needed.
 2. On npmjs.com, open the package's settings and add a trusted publisher: GitHub Actions, repository `AesonFord/Renami`, workflow `release.yml`.
 3. Set the repository variable `NPM_PUBLISH` to `true` (Settings → Secrets and variables → Actions → Variables).
 

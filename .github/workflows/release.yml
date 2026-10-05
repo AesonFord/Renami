@@ -114,7 +114,7 @@ jobs:
         shell: bash
         run: |
           prefix="$(mktemp -d)"
-          npm install -g --prefix "$prefix" ./cli-package/renami-*.tgz
+          npm install -g --prefix "$prefix" ./cli-package/aesonford-renami-*.tgz
           expected="$(node -p "require('./package.json').version")"
           actual="$("$prefix/bin/renami" --version)"
           if [ "$actual" != "$expected" ]; then
@@ -192,7 +192,7 @@ jobs:
             || { echo "::error::npm $version is too old for trusted publishing (needs 11.5.1 or later)"; exit 1; }
           tag=()
           [[ "$GITHUB_REF_NAME" == *-* ]] && tag=(--tag next)
-          npm publish installers/renami-*.tgz --provenance --access public --ignore-scripts "${tag[@]}"
+          npm publish installers/aesonford-renami-*.tgz --provenance --access public --ignore-scripts "${tag[@]}"
       - name: Make the release public
         env:
           GH_TOKEN: ${{ github.token }}

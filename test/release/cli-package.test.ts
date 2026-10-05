@@ -5,10 +5,10 @@ import { cliPackageJson, forbiddenInputs } from '../../scripts/cli-package.mjs';
 const app = JSON.parse(readFileSync('package.json', 'utf8'));
 
 describe('cliPackageJson', () => {
-  it("publishes renami with the app's version, licence, Node range and ExifTool range", () => {
+  it("publishes @aesonford/renami with the app's version, licence, Node range and ExifTool range", () => {
     const pkg = cliPackageJson(app);
     expect(pkg).toMatchObject({
-      name: 'renami',
+      name: '@aesonford/renami',
       version: app.version,
       license: app.license,
       type: 'module',
