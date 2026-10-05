@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { isMoving, type Plan, type RollbackReport, type WallClock } from '../core/index.js';
+import { formatWallClock, isMoving, type Plan, type RollbackReport, type WallClock } from '../core/index.js';
 
 export interface PlanSummary {
   total: number;
@@ -23,10 +23,7 @@ export function shown(p: string, cwd: string): string {
   return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel) ? rel : p;
 }
 
-const pad = (n: number, width = 2): string => String(n).padStart(width, '0');
-
-export const wallClockText = (w: WallClock): string =>
-  `${pad(w.year, 4)}-${pad(w.month)}-${pad(w.day)}T${pad(w.hour)}:${pad(w.minute)}:${pad(w.second)}`;
+export const wallClockText = (w: WallClock): string => formatWallClock(w, 'YYYY-MM-DDTHH:mm:ss');
 
 export function summarize(plan: Plan): PlanSummary {
   let toRename = 0;

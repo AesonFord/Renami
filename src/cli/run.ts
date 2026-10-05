@@ -50,6 +50,7 @@ const exists = (p: string): Promise<boolean> =>
     () => true,
     () => false,
   );
+const CANCELLED = 'cancelled; nothing was renamed';
 const message = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 const fail = (ctx: RunContext, text: string): void => {
   ctx.stderr.write(`renami: ${text}\n`);
@@ -95,20 +96,16 @@ const progressOf = (ctx: RunContext, label: string) => (done: number, total: num
 };
 
 async function runRename({ paths, settings, options }: RenameCommand, reader: MetadataReader, ctx: RunContext): Promise<number> {
-  for (const p of paths) {
-    if (!(await exists(p))) {
-      fail(ctx, `no such file or folder: ${p}`);
-      return EXIT.usage;
-    }
+  const found = await Promise.all(paths.map(exists));
+  const missing = paths.find((_, i) => !found[i]);
+  if (missing !== undefined) {
+    fail(ctx, `no such file or folder: ${missing}`);
+    return EXIT.usage;
   }
   // Checked before anything moves: a journal that can't be written would lose the undo record.
   if (options.journal !== null) {
     if (await exists(options.journal)) {
       fail(ctx, `the journal ${options.journal} already exists; pick a new file name`);
-      return EXIT.usage;
-    }
-    if (!(await exists(path.dirname(options.journal)))) {
-      fail(ctx, `the journal's folder doesn't exist: ${path.dirname(options.journal)}`);
       return EXIT.usage;
     }
     const probe = `${options.journal}.${process.pid}.check`;
@@ -117,7 +114,9 @@ async function runRename({ paths, settings, options }: RenameCommand, reader: Me
       await unlink(probe);
     } catch (e) {
       await unlink(probe).catch(() => undefined);
-      fail(ctx, `can't write the journal in ${path.dirname(options.journal)}: ${message(e)}`);
+      const dir = path.dirname(options.journal);
+      const missingDir = (e as NodeJS.ErrnoException).code === 'ENOENT';
+      fail(ctx, missingDir ? `the journal's folder doesn't exist: ${dir}` : `can't write the journal in ${dir}: ${message(e)}`);
       return EXIT.usage;
     }
   }
@@ -141,7 +140,7 @@ async function runRename({ paths, settings, options }: RenameCommand, reader: Me
     return EXIT.failed;
   }
   if (ctx.signal.aborted) {
-    fail(ctx, 'cancelled; nothing was renamed');
+    fail(ctx, CANCELLED);
     return EXIT.failed;
   }
   if (read.exiftoolFailed) fail(ctx, "ExifTool isn't working, so files without details use their file system dates");
@@ -151,24 +150,24 @@ async function runRename({ paths, settings, options }: RenameCommand, reader: Me
     const hashes = new HashCache(timeZone);
     await hashes.hashMissing(entries, ctx.signal);
     if (ctx.signal.aborted) {
-      fail(ctx, 'cancelled; nothing was renamed');
+      fail(ctx, CANCELLED);
       return EXIT.failed;
     }
     allMetadata = hashes.mergeInto(metadata, entries);
   }
 
   const plan = buildPlan({ entries, metadata: allMetadata, settings, fs: createFsView(), platform: ctx.platform, timeZone });
-  if (!options.json && !options.quiet && plan.patternError === null) {
-    ctx.stdout.write(entries.length === 0 ? 'Nothing to rename: no files matched.\n' : planText(plan, ctx.cwd));
-  }
   const showJson = (result?: ApplyResult): void => {
     if (options.json) ctx.stdout.write(planJson(plan, result));
   };
-
   if (plan.patternError !== null) {
     showJson();
     fail(ctx, plan.patternError);
     return EXIT.patternError;
+  }
+
+  if (!options.json && !options.quiet) {
+    ctx.stdout.write(entries.length === 0 ? 'Nothing to rename: no files matched.\n' : planText(plan, ctx.cwd));
   }
   if (plan.errorCount > 0) {
     showJson();

@@ -158,11 +158,9 @@ async function readSettings(file: string, readText: (file: string) => Promise<st
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     throw new UsageError(`the settings file ${file} must hold a JSON object`);
   }
-  const sequence = (data as { sequence?: unknown }).sequence;
-  if (typeof sequence === 'object' && sequence !== null && (sequence as { sortBy?: unknown }).sortBy === 'manual') {
-    throw new UsageError('sortBy "manual" only works in the desktop app');
-  }
-  return withDefaults(data);
+  const settings = withDefaults(data);
+  if (settings.sequence.sortBy === 'manual') throw new UsageError('sortBy "manual" only works in the desktop app');
+  return settings;
 }
 
 function applyFlags(s: RenameSettings, v: RenameValues, cwd: string): void {

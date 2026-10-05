@@ -31,14 +31,18 @@ export function parseRegValue(stdout: string): string | null {
 }
 
 export async function windowsApp(deps: LaunchDeps): Promise<string | null> {
-  const candidates: string[] = [];
+  // HKLM is only asked when the per-user install isn't there: each query starts reg.exe.
   for (const root of ['HKCU', 'HKLM'] as const) {
     const dir = await deps.installLocation(root, WINDOWS_INSTALL_KEY);
-    if (dir) candidates.push(path.win32.join(dir, 'Renami.exe'));
+    const file = dir ? path.win32.join(dir, 'Renami.exe') : null;
+    if (file && (await deps.exists(file))) return file;
   }
-  if (deps.env.LOCALAPPDATA) candidates.push(path.win32.join(deps.env.LOCALAPPDATA, 'Programs', 'Renami', 'Renami.exe'));
-  if (deps.env.ProgramFiles) candidates.push(path.win32.join(deps.env.ProgramFiles, 'Renami', 'Renami.exe'));
-  for (const file of candidates) if (await deps.exists(file)) return file;
+  const { LOCALAPPDATA, ProgramFiles } = deps.env;
+  const defaults = [
+    LOCALAPPDATA && path.win32.join(LOCALAPPDATA, 'Programs', 'Renami', 'Renami.exe'),
+    ProgramFiles && path.win32.join(ProgramFiles, 'Renami', 'Renami.exe'),
+  ];
+  for (const file of defaults) if (file && (await deps.exists(file))) return file;
   return null;
 }
 

@@ -6,9 +6,7 @@ import {
   createFsView,
   effectiveMetadata,
   executePlan,
-  EXIFTOOL_FAILURE_LIMIT,
   fsMetadata,
-  HASH_CONCURRENCY,
   HashCache,
   History,
   MetadataReader,
@@ -45,8 +43,6 @@ import type {
 } from '../shared/ipc.js';
 import { remapSources, toPlanView } from './rows.js';
 
-// Moved to core so the command line shares them; re-exported for existing importers.
-export { EXIFTOOL_FAILURE_LIMIT, HASH_CONCURRENCY, patternUsesHash };
 /** Progress events are sent at most this often. */
 export const PROGRESS_INTERVAL_MS = 200;
 /** Why a rename, undo, scan or plan can't start while another rename or undo runs. */
@@ -262,8 +258,6 @@ export class Session {
     const report = throttle((s: MetadataStatus) => this.opts.events.metadataProgress(s), PROGRESS_INTERVAL_MS);
     this.stopReporting = report.cancel;
     let done = 0;
-    /** Set once reading has stopped: results from files still open are ignored. */
-    let ended = false;
 
     this.readingFinished = false;
     report({ done, total, finished: false, exiftoolFailed: false }, true);
@@ -272,13 +266,12 @@ export class Session {
       const result = await readMetadata(this.entries, this.reader, {
         signal: controller.signal,
         onResult: (p, meta, { exiftoolFailed }) => {
-          if (ended || gen !== this.generation) return;
+          if (gen !== this.generation) return;
           this.metadata.set(p, meta);
           done += 1;
           report({ done, total, finished: false, exiftoolFailed });
         },
       });
-      ended = true;
       // Something in handling a result threw (reading a file never throws: it records a
       // readError). That is our bug, not a broken ExifTool, so it isn't reported as one.
       if ('error' in result && gen === this.generation) console.error('Reading metadata stopped:', result.error);
