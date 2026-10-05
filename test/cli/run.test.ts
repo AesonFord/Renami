@@ -158,6 +158,8 @@ describe('renami rename', () => {
     const r = await run(['rename', '.', '-p', '{name}_x', '--apply'], dir, { exiftool });
     expect(r.code).toBe(EXIT.stale);
     expect(r.stderr).toContain('b.txt');
+    expect(r.stderr).toMatch(/^renami: Nothing was renamed/m);
+    for (const line of r.stderr.split('\n').filter(Boolean)) expect(line).toMatch(/^(renami: | {2})/);
     expect(readdirSync(dir).sort()).toEqual(['a.txt', 'b.txt']);
   });
 
@@ -210,6 +212,7 @@ describe('renami rename', () => {
     const r = await run(['rename', '.', '-p', PATTERN, '--apply'], dir, { signal: controller.signal });
     expect(r.code).toBe(EXIT.failed);
     expect(r.stderr).toContain('cancelled; nothing was renamed');
+    for (const line of r.stderr.split('\n').filter(Boolean)) expect(line).toMatch(/^(renami: | {2})/);
     expect(readdirSync(dir).sort()).toEqual(['clip.mp4', 'nodate.jpg', 'photo.jpg']);
     expect(r.made).toBe(1);
     expect(r.ended).toBe(1);

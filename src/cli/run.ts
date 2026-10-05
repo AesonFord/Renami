@@ -208,7 +208,7 @@ async function runRename({ paths, settings, options }: RenameCommand, reader: Me
 
   showJson(result);
   if (!options.json) {
-    if (result.status !== 'done') ctx.stderr.write(resultText(result, ctx.cwd));
+    if (result.status !== 'done') ctx.stderr.write(`renami: ${resultText(result, ctx.cwd)}`);
     else if (!options.quiet) ctx.stdout.write(resultText(result, ctx.cwd));
   }
   if (result.status === 'done') return journalFailed ? EXIT.failed : EXIT.ok;
