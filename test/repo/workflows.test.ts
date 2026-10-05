@@ -34,7 +34,8 @@ describe.each(workflows)('$file', ({ text }) => {
   });
 
   it('keeps checkout from saving the token in .git/config', () => {
-    const steps = text.split(/^\s*- /m).filter((s) => /^uses:\s*actions\/checkout@/.test(s));
+    const steps = text.split(/^\s*- /m).filter((s) => /^\s*uses:\s*actions\/checkout@/m.test(s));
+    if (text.includes('actions/checkout')) expect(steps.length).toBeGreaterThan(0);
     for (const step of steps) expect(step).toMatch(/persist-credentials:\s*false/);
   });
 });

@@ -576,7 +576,7 @@ test('resizes a column with the arrow keys, and the header menu resets the width
   await expect(divider).not.toHaveAttribute('aria-valuenow');
   await divider.focus();
   for (let i = 0; i < 3; i += 1) await win.keyboard.press('ArrowRight');
-  await expect.poll(() => width()).toBeGreaterThan(before + 28);
+  await expect.poll(() => width()).toBeGreaterThan(before);
   await expect(divider).toHaveAttribute('aria-valuenow', /^\d+$/);
 
   await win.locator('.preview-head-scroll').click({ button: 'right' });

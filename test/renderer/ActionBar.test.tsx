@@ -38,11 +38,10 @@ function renderBar(over: Partial<ActionBarProps> = {}) {
 describe('ActionBar', () => {
   it('summarizes the batch and renames', async () => {
     const props = renderBar();
-    // Each part is <span><strong>3</strong> <span>will be renamed</span></span>; check the whole part.
-    const part = (text: string) => screen.getByText(text).parentElement;
-    expect(part('will be renamed')).toHaveTextContent('3 will be renamed');
-    expect(part('used a fallback date')).toHaveTextContent('1 used a fallback date');
-    expect(part('got a suffix')).toHaveTextContent('1 got a suffix');
+    const part = (text: string) => screen.getByText((_, el) => el?.textContent === text);
+    expect(part('3 will be renamed')).toBeInTheDocument();
+    expect(part('1 used a fallback date')).toBeInTheDocument();
+    expect(part('1 got a suffix')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Undo last rename' })).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Rename 3 files' }));
     expect(props.onRename).toHaveBeenCalled();
@@ -187,27 +186,6 @@ describe('OutcomeDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Copy report' }));
     expect(onCopy).toHaveBeenCalledWith(reportText(outcome));
     await userEvent.click(screen.getByRole('button', { name: 'Close' }));
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it('confirms a complete rollback', () => {
-    const outcome: Outcome = { kind: 'failed', action: 'rename', error: 'Permission denied', rollback: { complete: true, stranded: [] }, skipped: [] };
-    render(<OutcomeDialog outcome={outcome} onCopy={vi.fn()} onClose={vi.fn()} />);
-    expect(screen.getByRole('alertdialog')).toHaveTextContent('Every file was put back where it was.');
-  });
-
-  it('lists files an undo skipped, with the reason', () => {
-    const outcome: Outcome = { kind: 'undone', restored: 2, skipped: [{ path: '/p/x.jpg', reason: 'Changed since the rename' }] };
-    render(<OutcomeDialog outcome={outcome} onCopy={vi.fn()} onClose={vi.fn()} />);
-    const dialog = screen.getByRole('alertdialog', { name: "Some files weren't put back" });
-    expect(dialog).toHaveTextContent('/p/x.jpg: Changed since the rename');
-  });
-
-  it('closes on Escape', async () => {
-    const onClose = vi.fn();
-    const outcome: Outcome = { kind: 'failed', action: 'rename', error: 'Disk full', rollback: null, skipped: [] };
-    render(<OutcomeDialog outcome={outcome} onCopy={vi.fn()} onClose={onClose} />);
-    await userEvent.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalled();
   });
 

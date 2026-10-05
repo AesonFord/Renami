@@ -102,3 +102,16 @@ export function scanAndPlan(win: Page, dir: string, settings: RenameSettings) {
     { dir, settings },
   );
 }
+
+/**
+ * Selects a file's row by clicking its date cell: unlike the checkbox or the new-name cell, a
+ * click there neither toggles the file nor starts editing.
+ */
+export async function selectRow(win: Page, name: string): Promise<void> {
+  await win
+    .getByRole('row')
+    .filter({ has: win.getByRole('cell', { name, exact: true }) })
+    .getByRole('cell')
+    .nth(2)
+    .click();
+}

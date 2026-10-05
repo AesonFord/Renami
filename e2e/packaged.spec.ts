@@ -2,7 +2,7 @@ import { copyFileSync, existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_SETTINGS } from '../src/core/types.js';
 import { expect, test } from './fixtures.js';
-import { scanAndPlan } from './helpers.js';
+import { scanAndPlan, selectRow } from './helpers.js';
 
 // Where `npm run pack` puts the app on each OS.
 const CANDIDATES = [
@@ -47,11 +47,11 @@ test('the packaged app previews HEIC and PDF files from inside its archive', asy
   await win.getByRole('button', { name: 'Choose folder…' }).click();
 
   const panel = win.getByRole('complementary', { name: 'File preview' });
-  await win.getByRole('row').filter({ hasText: 'photo.heic' }).click({ position: { x: 120, y: 18 } });
+  await selectRow(win, 'photo.heic');
   const img = panel.getByRole('img', { name: 'Preview of photo.heic' });
   await expect.poll(() => img.evaluate((el) => (el as unknown as { naturalWidth: number }).naturalWidth)).toBe(64);
 
-  await win.getByRole('row').filter({ hasText: 'page.pdf' }).click({ position: { x: 120, y: 18 } });
+  await selectRow(win, 'page.pdf');
   const page = panel.getByRole('img', { name: 'Page 1 of page.pdf' });
   await expect.poll(() => page.evaluate((el) => (el as unknown as { width: number }).width)).toBeGreaterThan(0);
 });

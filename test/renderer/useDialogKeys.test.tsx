@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRef, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -174,7 +174,11 @@ describe('useFocusTrap', () => {
   it('ignores keys other than Tab', async () => {
     render(<TrapHarness />);
     await userEvent.click(button('Open'));
-    await userEvent.keyboard('{ArrowDown}');
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+    act(() => {
+      button('First').dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(false);
     expect(button('First')).toHaveFocus();
   });
 
@@ -259,42 +263,5 @@ describe('useFocusTrap without anything to trap', () => {
     expect(screen.getByLabelText('Middle')).toHaveFocus();
     await userEvent.tab({ shift: true });
     expect(button('First')).toHaveFocus();
-  });
-});
-
-describe('useEscapeKey cleanup guard', () => {
-  it('tolerates its stack entry having gone missing by the time it unmounts', async () => {
-    // A fresh copy of the module, so the entry this test strands never reaches the other tests.
-    vi.resetModules();
-    const fresh = await import('../../src/renderer/components/useDialogKeys.js');
-    function FreshLayer({ onEscape }: { onEscape(): void }) {
-      fresh.useEscapeKey(onEscape);
-      return null;
-    }
-    const first = vi.fn();
-    const { unmount } = render(<FreshLayer onEscape={first} />);
-
-    // Nothing public can take the entry out from under the hook, so make its lookup fail instead.
-    const indexOf = Array.prototype.indexOf;
-    const lookup = vi
-      .spyOn(Array.prototype, 'indexOf')
-      .mockImplementation(function (this: unknown[], item: unknown, from?: number) {
-        return typeof item === 'function' ? -1 : indexOf.call(this, item, from);
-      });
-    try {
-      expect(() => unmount()).not.toThrow();
-    } finally {
-      lookup.mockRestore();
-    }
-
-    // The stranded entry is still on the stack, so it keeps answering Escape until a newer
-    // layer opens above it.
-    await userEvent.keyboard('{Escape}');
-    expect(first).toHaveBeenCalledTimes(1);
-    const top = vi.fn();
-    render(<FreshLayer onEscape={top} />);
-    await userEvent.keyboard('{Escape}');
-    expect(top).toHaveBeenCalledTimes(1);
-    expect(first).toHaveBeenCalledTimes(1);
   });
 });

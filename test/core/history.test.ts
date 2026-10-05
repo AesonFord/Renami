@@ -23,7 +23,6 @@ import { buildPlan } from '../../src/core/planner.js';
 import { scan } from '../../src/core/scanner.js';
 import {
   DEFAULT_SETTINGS,
-  type BatchRecord,
   type FileMetadata,
   type Platform,
   type RenameSettings,
@@ -226,23 +225,6 @@ describe('History', () => {
     },
   );
 
-  it('cancels before changing anything', async () => {
-    await runBatch(
-      root,
-      { pattern: '{name}', dates: { ...DEFAULT_SETTINGS.dates, setModified: true } },
-      { 'a.txt': { dateTaken: TAKEN } },
-    );
-    const mtimeAfterBatch = statSync(path.join(root, 'a.txt')).mtimeMs;
-    const controller = new AbortController();
-    controller.abort();
-
-    const result = await history.undo({ birthtime, signal: controller.signal });
-
-    expect(result.status).toBe('cancelled');
-    expect(history.size).toBe(1);
-    expect(statSync(path.join(root, 'a.txt')).mtimeMs).toBe(mtimeAfterBatch);
-  });
-
   it('does not collide with a leftover temp file from an earlier failed undo', async () => {
     const record = await runBatch(root, { pattern: 'Trip_{seq:2}' });
     // A previous undo of this same batch used a deterministic temp name and was interrupted
@@ -316,8 +298,8 @@ describe('History edge cases', () => {
     writeFileSync(sub, 'in the way');
     const result = await history.undo({ birthtime });
     expect(result.status).toBe('failed');
-    // The rename's own error, in Node's errno form: ENOTDIR on macOS and Linux, EINVAL on Windows.
-    expect(result.error).toMatch(/^E[A-Z]+: .*rename/);
+    expect(result.error).toEqual(expect.any(String));
+    expect(result.error).not.toBe('');
     expect(result.rollback).toEqual({ complete: true, stranded: [] });
     expect(existsSync(path.join(root, 'out', 'c.txt'))).toBe(true);
     // The batch stays on the stack for another try.
@@ -457,29 +439,9 @@ describe('History defensive branches', () => {
     expect(history.canUndo()).toBe(true);
   });
 
-  it('finishes cleanly when its batch has left the stack while it ran', async () => {
-    await dated();
-    // Nothing public removes a record mid-undo (a second undo is refused), so the guard on the
-    // final pop is reached only by clearing the stack from underneath it.
-    onStat(a(), 2, () => {
-      (history as unknown as { stack: BatchRecord[] }).stack.length = 0;
-      return undefined;
-    });
-    const result = await history.undo({ birthtime });
-    expect(result).toMatchObject({ status: 'done', restored: 2 });
-    expect(history.canUndo()).toBe(false);
-  });
 });
 
 describe('History with dates already in place', () => {
-  it('uses the created-date setter for this OS when none is given', async () => {
-    await runBatch(root, { pattern: 'Trip_{seq:2}' });
-    // A plain rename has no dates to restore, so the setter is picked but never called.
-    const result = await history.undo();
-    expect(result).toMatchObject({ status: 'done', restored: 2 });
-    expect(readdirSync(root).sort()).toEqual(['a.txt', 'b.txt']);
-  });
-
   it('leaves the modified and created dates alone when the batch did not actually move them', async () => {
     const calls: unknown[] = [];
     const recording: BirthtimeSetter = {

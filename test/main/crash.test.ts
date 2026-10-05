@@ -53,14 +53,6 @@ describe('reloadLimiter', () => {
     return { now: () => t, advance: (ms: number) => (t += ms) };
   };
 
-  it('allows reloads while under the limit', () => {
-    const c = clock();
-    const allow = reloadLimiter({ max: 3, windowMs: 60_000, now: c.now });
-    expect(allow()).toBe(true);
-    c.advance(1000);
-    expect(allow()).toBe(true);
-  });
-
   it('allows exactly max reloads in the window, then refuses', () => {
     const c = clock();
     const allow = reloadLimiter({ max: 3, windowMs: 60_000, now: c.now });

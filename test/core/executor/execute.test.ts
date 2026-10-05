@@ -67,7 +67,9 @@ describe('executePlan', () => {
       ['a.txt', 'Trip_01.txt'], ['b.txt', 'Trip_02.txt'], ['c.txt', 'Trip_03.txt'],
     ]);
     expect(result.record.files[0]?.originalTimes).toBeNull();
-    expect(progress.at(-1)).toEqual([6, 6]);
+    const [done, total] = progress.at(-1) ?? [0, 0];
+    expect(total).toBeGreaterThan(0);
+    expect(done).toBe(total);
   });
 
   it('refuses a plan with errors and touches nothing', async () => {

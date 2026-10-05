@@ -243,13 +243,6 @@ describe('renderer CSP', () => {
 
 describe('main session boundary', () => {
   it('keeps Session and rows free of Electron so they run under plain Node', () => {
-    const files = ['src/main/session.ts', 'src/main/rows.ts'].filter((f) => {
-      try {
-        return statSync(f).isFile();
-      } catch {
-        return false; // created in Task 3
-      }
-    });
-    for (const file of files) expect(importsOf(file).filter((s) => s === 'electron'), file).toEqual([]);
+    for (const file of ['src/main/session.ts', 'src/main/rows.ts']) expect(importsOf(file).filter((s) => s === 'electron'), file).toEqual([]);
   });
 });

@@ -79,7 +79,8 @@ describe('quitDecision', () => {
 
 describe('BUSY_QUIT', () => {
   it('covers undo too, not just a rename', () => {
-    expect(BUSY_QUIT.message).not.toMatch(/rename is/);
+    expect(BUSY_QUIT.message).toBe('Files are still being renamed');
+    expect(BUSY_QUIT.detail).toContain('undo');
   });
 });
 

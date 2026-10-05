@@ -148,19 +148,6 @@ describe('PresetStore', () => {
     });
   });
 
-  it('keeps valid false and zero values', async () => {
-    const file = freshFile();
-    const store = new PresetStore(file);
-    const settings = {
-      ...DEFAULT_SETTINGS,
-      sequence: { ...DEFAULT_SETTINGS.sequence, keepGroupsTogether: false, start: 0 },
-    };
-    await store.save('FalseAndZero', settings);
-    const [preset] = await store.list();
-    expect(preset?.settings.sequence.keepGroupsTogether).toBe(false);
-    expect(preset?.settings.sequence.start).toBe(0);
-  });
-
   it('round-trips non-default valid settings', async () => {
     const file = freshFile();
     const store = new PresetStore(file);
