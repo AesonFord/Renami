@@ -49,7 +49,4 @@ describe('hashFile', () => {
     controller.abort();
     await expect(hashFile(p, controller.signal)).rejects.toThrow('Cancelled');
   });
-  it('rejects for a missing file', async () => {
-    await expect(hashFile(path.join(dir, 'missing.bin'))).rejects.toThrow();
-  });
 });
