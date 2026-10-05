@@ -20,7 +20,7 @@ async function main(): Promise<number> {
     command = await parseCommand(process.argv.slice(2), process.cwd());
   } catch (e) {
     if (!(e instanceof UsageError)) throw e;
-    process.stderr.write(`renami: ${e.message}\nRun "renami --help" for usage.\n`);
+    process.stderr.write(`renami: ${e.message}\nrenami: run "renami --help" for usage\n`);
     return EXIT.usage;
   }
 

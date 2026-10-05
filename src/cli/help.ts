@@ -52,7 +52,7 @@ Exit codes:
   2   Invalid pattern
   3   Some files can't be renamed; nothing was renamed
   4   Files changed between the plan and the rename; nothing was renamed
-  5   The rename or undo failed or was cancelled
+  5   The rename or undo failed or was cancelled, or the journal couldn't be written
   6   The undo skipped some files
   7   The desktop app was not found
 `;

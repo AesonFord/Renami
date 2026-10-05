@@ -46,7 +46,7 @@ renami rename ~/Photos/Hawaii -p 'Hawaii_{date_taken:YYYY-MM-DD}_{seq:3}' --appl
 renami undo undo.json                                                                                # put it all back
 ```
 
-`--journal` records the batch, so `renami undo` can reverse it at any time, even after other runs. It skips files that changed since. `renami tokens` lists the tokens, and `renami --help` lists every option.
+`--journal` records the batch (it must be a new file), so `renami undo` can reverse it at any time, even after other runs. It skips files that changed since. `renami tokens` lists the tokens, and `renami --help` lists every option.
 
 Settings the app can save, such as find & replace rules, extension maps and filters, can also be given as a JSON file. Flags override it:
 
@@ -59,6 +59,8 @@ Settings the app can save, such as find & replace rules, extension maps and filt
   "filter": { "includeSubfolders": true, "extensions": ["jpg", "heic"] }
 }
 ```
+
+Each find & replace rule needs all four fields (`find`, `replace`, `regex`, `matchCase`); a rule missing one is ignored, so check the dry run before adding `--apply`.
 
 ```bash
 renami rename ~/Photos --settings trip.json --json   # the plan as one JSON object
@@ -73,7 +75,7 @@ A negative clock shift needs an `=`: `--shift=-60`.
 | 2 | Invalid pattern |
 | 3 | Some files can't be renamed (nothing was renamed) |
 | 4 | Files changed between the plan and the rename (nothing was renamed) |
-| 5 | The rename or undo failed or was cancelled; anything moved was put back where possible |
+| 5 | The rename or undo failed or was cancelled (anything moved was put back where possible), or the files were renamed but the journal couldn't be written |
 | 6 | The undo skipped some files |
 | 7 | `renami <paths…>`: the desktop app was not found |
 

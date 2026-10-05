@@ -1,4 +1,4 @@
-import { lstat, rename } from 'node:fs/promises';
+import { lstat, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   buildPlan,
@@ -111,6 +111,15 @@ async function runRename({ paths, settings, options }: RenameCommand, reader: Me
       fail(ctx, `the journal's folder doesn't exist: ${path.dirname(options.journal)}`);
       return EXIT.usage;
     }
+    const probe = `${options.journal}.${process.pid}.check`;
+    try {
+      await writeFile(probe, '', { flag: 'wx' });
+      await unlink(probe);
+    } catch (e) {
+      await unlink(probe).catch(() => undefined);
+      fail(ctx, `can't write the journal in ${path.dirname(options.journal)}: ${message(e)}`);
+      return EXIT.usage;
+    }
   }
 
   const timeZone = ctx.timeZone ?? systemTimeZone();
@@ -149,7 +158,7 @@ async function runRename({ paths, settings, options }: RenameCommand, reader: Me
   }
 
   const plan = buildPlan({ entries, metadata: allMetadata, settings, fs: createFsView(), platform: ctx.platform, timeZone });
-  if (!options.json && !options.quiet) {
+  if (!options.json && !options.quiet && plan.patternError === null) {
     ctx.stdout.write(entries.length === 0 ? 'Nothing to rename: no files matched.\n' : planText(plan, ctx.cwd));
   }
   const showJson = (result?: ApplyResult): void => {

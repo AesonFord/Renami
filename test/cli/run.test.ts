@@ -1,4 +1,4 @@
-import { appendFileSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -128,6 +128,7 @@ describe('renami rename', () => {
     const r = await run(['rename', mediaDir(), '-p', '{nope}'], tempDir());
     expect(r.code).toBe(EXIT.patternError);
     expect(r.stderr).toMatch(/^renami: .*nope/m);
+    expect(r.stdout).toBe('');
   });
 
   it('exits 3 and renames nothing when files have errors, even with --apply', async () => {
@@ -190,6 +191,24 @@ describe('renami rename', () => {
     expect(missing.stderr).toContain("doesn't exist");
     expect(readdirSync(dir).filter((n) => n.startsWith('Hawaii_'))).toEqual([]);
   });
+
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+    'refuses a journal in a read-only folder, before renaming',
+    async () => {
+      const dir = mediaDir();
+      const sub = path.join(dir, 'ro');
+      mkdirSync(sub);
+      chmodSync(sub, 0o500);
+      try {
+        const r = await run(['rename', '.', '-p', PATTERN, '--apply', '--journal', 'ro/undo.json'], dir);
+        expect(r.code).toBe(EXIT.usage);
+        expect(r.stderr).toContain("can't write the journal");
+        expect(readdirSync(dir).filter((n) => n.startsWith('Hawaii_'))).toEqual([]);
+      } finally {
+        chmodSync(sub, 0o700);
+      }
+    },
+  );
 
   // Review focus 4
   it('says there is nothing to rename for an empty folder, and writes no journal', async () => {
