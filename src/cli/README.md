@@ -3,7 +3,7 @@
 Rename files in bulk from a pattern, from the command line. This is the command-line companion to the [Renami](https://github.com/AesonFord/Renami) desktop app, with the same rename engine.
 
 ```bash
-npm install -g renami     # needs Node 22 or later
+npm install -g @aesonford/renami     # needs Node 22 or later
 
 renami rename ~/Photos/Hawaii -p 'Hawaii_{date_taken:YYYY-MM-DD}_{seq:3}'                            # preview
 renami rename ~/Photos/Hawaii -p 'Hawaii_{date_taken:YYYY-MM-DD}_{seq:3}' --apply --journal undo.json  # rename

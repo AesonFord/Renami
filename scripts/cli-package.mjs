@@ -5,7 +5,7 @@ export function cliPackageJson(app) {
   const exiftool = app.dependencies?.['exiftool-vendored'];
   if (!exiftool) throw new Error('package.json has no exiftool-vendored dependency');
   return {
-    name: 'renami',
+    name: '@aesonford/renami',
     version: app.version,
     description: 'Rename files in bulk from a pattern, from the command line',
     license: app.license,
