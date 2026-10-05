@@ -6,6 +6,8 @@ directories:
   output: dist
 files:
   - out/**
+  # The npm command line is built into out/cli too; it isn't part of the app.
+  - "!out/cli/**"
   - package.json
 # ExifTool is a real program, not JavaScript, so it must live outside the asar archive.
 # exiftool-vendored finds the unpacked copy by itself.
