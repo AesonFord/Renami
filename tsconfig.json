@@ -12,10 +12,12 @@
   },
   "include": [
     "src/core",
+    "src/cli",
     "src/main",
     "src/preload",
     "src/shared",
     "test/core",
+    "test/cli",
     "test/main",
     "e2e",
     "vitest.config.ts",
