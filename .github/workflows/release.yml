@@ -88,12 +88,52 @@ jobs:
           path: installers/
           if-no-files-found: error
 
+  # Packs the npm command line (out/cli) and checks the packed tarball installs and runs.
+  # Like build, it runs npm ci, so it gets no write access and no OIDC token.
+  cli:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      # No npm cache, for the same reason as the build job.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      # This job only bundles and packs the command line; it never runs Electron.
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npm run build:cli
+      - name: Pack the command line
+        run: mkdir cli-package && npm pack ./out/cli --pack-destination cli-package
+      # Compared with package.json, not the tag: a manual run has no tag.
+      - name: Install the packed tarball and check its version
+        shell: bash
+        run: |
+          prefix="$(mktemp -d)"
+          npm install -g --prefix "$prefix" cli-package/renami-*.tgz
+          expected="$(node -p "require('./package.json').version")"
+          actual="$("$prefix/bin/renami" --version)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::renami --version printed $actual, expected $expected"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: cli-package
+          path: cli-package/
+          if-no-files-found: error
+
   # Runs only for a tag push, and only when every platform built and passed its checks. A manual
   # run (workflow_dispatch), even one started from a tag, must never publish.
-  # It runs no npm code, so it is the only job trusted with write access and an OIDC token.
+  # It runs no third-party npm code (the publish to npm uses --ignore-scripts), so it is the
+  # only job trusted with write access and an OIDC token.
   release:
     if: github.event_name == 'push' && github.ref_type == 'tag'
-    needs: build
+    needs: [build, cli]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -105,6 +145,11 @@ jobs:
           pattern: installers-*
           path: installers
           merge-multiple: true
+      # The npm tarball ships with the installers: in SHA256SUMS, the attestation and the release.
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: cli-package
+          path: installers
       - name: Write the checksums
         working-directory: installers
         run: sha256sum -- * > SHA256SUMS
@@ -113,9 +158,9 @@ jobs:
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: installers/*
-      # Created as a draft and published only once every upload succeeded, so a failed upload
-      # never leaves a public release with installers missing.
-      - name: Create the release
+      # Created as a draft and published only once every upload (and the publish to npm) succeeded,
+      # so a failure never leaves a public release with something missing.
+      - name: Create the release as a draft
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -131,4 +176,24 @@ jobs:
             --title "Renami ${GITHUB_REF_NAME#v}" \
             --notes "First launch on macOS or Windows? See the [install notes](https://github.com/AesonFord/Renami#package-it). To check a download, see [SECURITY.md](https://github.com/AesonFord/Renami/blob/main/SECURITY.md#verifying-a-download)." \
             --generate-notes
-          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
+      # Trusted publishing: npm checks this workflow's OIDC token, so no npm secret exists.
+      # Off until the package is set up on npm (README, "Release it"): set NPM_PUBLISH=true then.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        if: vars.NPM_PUBLISH == 'true'
+        with:
+          node-version: 24
+      - name: Publish the command line to npm
+        if: vars.NPM_PUBLISH == 'true'
+        shell: bash
+        run: |
+          # Trusted publishing needs npm 11.5.1 or later.
+          version="$(npm --version)"
+          node -e "const [a, b, c] = process.argv[1].split('.').map(Number); process.exit(a > 11 || (a === 11 && (b > 5 || (b === 5 && c >= 1))) ? 0 : 1)" "$version" \
+            || { echo "::error::npm $version is too old for trusted publishing (needs 11.5.1 or later)"; exit 1; }
+          tag=()
+          [[ "$GITHUB_REF_NAME" == *-* ]] && tag=(--tag next)
+          npm publish installers/renami-*.tgz --provenance --access public --ignore-scripts "${tag[@]}"
+      - name: Make the release public
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false

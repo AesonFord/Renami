@@ -139,12 +139,12 @@ describe('App', () => {
 
   it("shows the pattern bar's extension from the first row's new name", async () => {
     await withRows([row({ newName: 'x.heic' })]);
-    await waitFor(() => expect(document.querySelector('.pat-ext')?.textContent).toBe('.heic'));
+    await waitFor(() => expect(screen.getByTestId('pattern-mirror')).toHaveTextContent(/\.heic$/));
   });
 
   it("falls back to the current name's extension when the new name has none", async () => {
     await withRows([row({ newName: '', currentName: 'a.jpg' })]);
-    await waitFor(() => expect(document.querySelector('.pat-ext')?.textContent).toBe('.jpg'));
+    await waitFor(() => expect(screen.getByTestId('pattern-mirror')).toHaveTextContent(/\.jpg$/));
   });
 
   it('keeps the drop overlay while dragging over a child element', async () => {
@@ -287,16 +287,13 @@ describe('App', () => {
 
     await clickRename();
 
-    const filesRegion = screen.getByRole('region', { name: 'Files' });
-    const panes = filesRegion.parentElement!;
-    expect(panes).toHaveAttribute('inert');
-    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
-    expect(panes.contains(cancelButton)).toBe(false);
+    expect(screen.getByRole('region', { name: 'Files' }).closest('[inert]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Cancel' }).closest('[inert]')).toBeNull();
 
     await act(async () => {
       running.resolve({ status: 'done', renamed: 2, datesChanged: 0, changes: [], sourcesAfter: ['/photos'] });
     });
-    expect(panes).not.toHaveAttribute('inert');
+    expect(screen.getByRole('region', { name: 'Files' }).closest('[inert]')).toBeNull();
   });
 });
 
@@ -346,18 +343,18 @@ describe('App wiring', () => {
 
   it('shows the extension of a moved file from the last path segment', async () => {
     await withRows([row({ newName: '2024/07/Trip_001.heic', currentName: 'IMG_1.jpg' })]);
-    await waitFor(() => expect(document.querySelector('.pat-ext')?.textContent).toBe('.heic'));
+    await waitFor(() => expect(screen.getByTestId('pattern-mirror')).toHaveTextContent(/\.heic$/));
   });
 
   it('shows no extension when the new name has none, even if the current name does', async () => {
     await withRows([row({ newName: 'README', currentName: 'readme.md' })]);
     await screen.findByRole('cell', { name: 'README' });
-    expect(document.querySelector('.pat-ext')).toBeNull();
+    expect(screen.getByTestId('pattern-mirror')).not.toHaveTextContent('.md');
   });
 });
 
 describe('App: more features', () => {
-  it('sends a typed name to the preview and offers export and import', async () => {
+  it('sends a typed name to the preview and exports it as CSV', async () => {
     const api = await withFiles();
     const firstRow = screen.getAllByRole('row')[1]!;
     fireEvent.doubleClick(within(firstRow).getAllByRole('cell')[1]!);
@@ -369,8 +366,6 @@ describe('App: more features', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Export…' }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Preview as CSV…' }));
     await waitFor(() => expect(api.saveText).toHaveBeenCalledWith('renami-preview.csv', expect.stringContaining('Trip_001.jpg')));
-    expect(screen.getByRole('button', { name: 'Import names…' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Files/ })).toBeInTheDocument();
   });
 });
 

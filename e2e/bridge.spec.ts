@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, readdirSync } from 'node:fs';
+import { copyFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { MenuItem } from 'electron';
 import { DEFAULT_SETTINGS } from '../src/core/types.js';
@@ -183,7 +183,7 @@ test('exercises presets, clipboard, token values, cancel and execute progress', 
   expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe('x');
 
   const tokens = await win.evaluate(() => (globalThis as unknown as { api: Api }).api.tokenValues());
-  expect(tokens?.fileName).toBeTruthy();
+  expect(tokens?.fileName).toMatch(/^(photo\.jpg|notes\.txt)$/);
 
   // Nothing is running, so this just resolves.
   await win.evaluate(() => (globalThis as unknown as { api: Api }).api.cancel());
@@ -250,24 +250,18 @@ test('asks before quitting while a rename can still be undone', async ({ launch,
   expect(await win.title()).toBe('Renami');
 
   // The user picks Quit: exactly one more prompt, then the app actually exits. The app is
-  // about to go away, so the count can't be read back with app.evaluate() after the fact; count
-  // via the main process's console output instead, which the inspector connection delivers
-  // independently of app.evaluate.
-  let prompts = 0;
-  app.on('console', (message) => {
-    if (message.text() === 'quit-prompt') prompts += 1;
-  });
-  await app.evaluate(({ dialog }) => {
+  // about to go away, so the count can't be read back with app.evaluate() afterwards; each
+  // prompt appends one character to a file instead, which is read once the app has quit.
+  const promptLog = path.join(tempDir('renami-e2e-prompts-'), 'prompts.log');
+  await app.evaluate(({ dialog }, log: string) => {
+    const fs = process.getBuiltinModule('node:fs');
     dialog.showMessageBoxSync = (() => {
-      console.log('quit-prompt');
+      fs.appendFileSync(log, 'x');
       return 0;
     }) as typeof dialog.showMessageBoxSync;
-  });
+  }, promptLog);
   await close(); // resolves once the app has actually quit
-  await expect.poll(() => prompts).toBeGreaterThanOrEqual(1);
-  // Give any further (unwanted) prompt a moment to arrive before checking it stayed at exactly 1.
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  expect(prompts).toBe(1);
+  expect(readFileSync(promptLog, 'utf8')).toBe('x');
 });
 
 test('closing the window (not just quitting the app) asks too, and Cancel keeps it open', async ({ launch, tempDir }) => {

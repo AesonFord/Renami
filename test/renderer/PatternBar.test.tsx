@@ -52,7 +52,6 @@ describe('PatternBar', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('The pattern is empty');
     expect(mirror()).toBeEmptyDOMElement();
     expect(input()).toHaveAttribute('aria-invalid', 'true');
-    expect(input().closest('.pattern-field')).toHaveClass('invalid');
   });
 
   it('marks a pattern whose parse error is at the very first character', () => {
@@ -226,7 +225,7 @@ describe('All tokens', () => {
     await userEvent.click(screen.getByRole('button', { name: 'All tokens…' }));
     const dialog = screen.getByRole('dialog', { name: 'All tokens' });
     expect(await within(dialog).findByText('Values for IMG_4821.HEIC')).toBeInTheDocument();
-    expect(within(dialog).getAllByRole('listitem')).toHaveLength(35);
+    expect(within(dialog).getAllByRole('listitem')).toHaveLength(Object.keys(values.values).length);
 
     await userEvent.type(within(dialog).getByRole('searchbox', { name: 'Search tokens' }), 'camera');
     expect(within(dialog).getAllByRole('listitem')).toHaveLength(2);

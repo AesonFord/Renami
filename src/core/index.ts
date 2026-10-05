@@ -22,3 +22,4 @@ export { formatWallClock, DEFAULT_DATE_FORMAT } from './dateFormat.js';
 export { systemTimeZone } from './wallclock.js';
 export { applyFindReplace, rulesFor, validateRules } from './findReplace.js';
 export { fsMetadata, effectiveMetadata, shiftWallClock, type DateAdjustments } from './dates.js';
+export { HashCache, patternUsesHash, readMetadata } from './pipeline.js';

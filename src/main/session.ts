@@ -7,11 +7,12 @@ import {
   effectiveMetadata,
   executePlan,
   fsMetadata,
-  hashFile,
+  HashCache,
   History,
   MetadataReader,
-  parsePattern,
+  patternUsesHash,
   PresetStore,
+  readMetadata,
   rulesFor,
   scan,
   systemTimeZone,
@@ -42,28 +43,12 @@ import type {
 } from '../shared/ipc.js';
 import { remapSources, toPlanView } from './rows.js';
 
-/**
- * After this many files in a row fail to read, the session probes ExifTool with `isWorking()` to
- * tell a broken process apart from a run of ordinary unreadable files.
- */
-export const EXIFTOOL_FAILURE_LIMIT = 5;
 /** Progress events are sent at most this often. */
 export const PROGRESS_INTERVAL_MS = 200;
 /** Why a rename, undo, scan or plan can't start while another rename or undo runs. */
 export const BUSY_MESSAGE = 'A rename or undo is already running.';
 /** How long undo waits for a stopped background read to let go of its files before going ahead. */
 export const UNDO_READ_WAIT_MS = 5000;
-
-/** How many files are hashed at once when the pattern uses {crc32} or {md5}. */
-export const HASH_CONCURRENCY = 4;
-
-/** Whether the pattern needs file hashes, which are read on demand. */
-export function patternUsesHash(pattern: string): boolean {
-  const parsed = parsePattern(pattern);
-  return parsed.ok && parsed.nodes.some((n) => n.type === 'token' && (n.name === 'crc32' || n.name === 'md5'));
-}
-
-const sizeKey = (e: FileEntry): string => `${e.size}:${e.mtimeMs}`;
 
 export interface SessionEvents {
   metadataProgress(status: MetadataStatus): void;
@@ -164,8 +149,8 @@ export class Session {
   /** `entries` by path, built on first use after they change. */
   private byPath: Map<string, FileEntry> | null = null;
   protected metadata = new Map<string, FileMetadata>();
-  /** Hashes read on demand, keyed by path and checked against size + mtime. Kept until clear(). */
-  protected hashes = new Map<string, { key: string; crc32: string; md5: string }>();
+  /** Hashes read on demand, checked against size + mtime. Kept until clear(). */
+  protected hashes: HashCache;
   protected plan: Plan | null = null;
   /** Whether reading had finished when the current plan was built. */
   protected planComplete = false;
@@ -189,6 +174,7 @@ export class Session {
 
   constructor(protected readonly opts: SessionOptions) {
     this.timeZone = opts.timeZone ?? systemTimeZone();
+    this.hashes = new HashCache(this.timeZone);
     this.reader = opts.reader ?? new MetadataReader({ timeZone: this.timeZone });
     this.presets = new PresetStore(opts.presetsFile);
   }
@@ -244,7 +230,7 @@ export class Session {
     this.entries = [];
     this.byPath = null;
     this.metadata = new Map();
-    this.hashes = new Map();
+    this.hashes = new HashCache(this.timeZone);
     this.plan = null;
     this.planComplete = false;
     this.readingFinished = true;
@@ -272,78 +258,26 @@ export class Session {
     const report = throttle((s: MetadataStatus) => this.opts.events.metadataProgress(s), PROGRESS_INTERVAL_MS);
     this.stopReporting = report.cancel;
     let done = 0;
-    let failuresInARow = 0;
-    let exiftoolFailed = false;
-    let probing = false;
-    /** The most recent isWorking() probe, if one is (or was) in flight. */
-    let probe: Promise<void> | null = null;
-    /**
-     * Set once reading has stopped, or once handling a result threw: results from files still
-     * open are ignored.
-     */
-    let ended = false;
 
     this.readingFinished = false;
-    report({ done, total, finished: false, exiftoolFailed }, true);
-
-    const finish = (): void => {
-      ended = true;
-      if (gen !== this.generation) return;
-      this.readingFinished = true;
-      report({ done, total, finished: true, exiftoolFailed }, true);
-    };
-
-    const record = (p: string, meta: FileMetadata): void => {
-      this.metadata.set(p, meta);
-      done += 1;
-      failuresInARow = meta.readError === undefined ? 0 : failuresInARow + 1;
-      if (failuresInARow >= EXIFTOOL_FAILURE_LIMIT && !exiftoolFailed && !probing) {
-        probing = true;
-        // A run of readErrors might be a broken ExifTool, or it might just be a run of
-        // empty/missing files. Ask ExifTool itself before giving up on it.
-        probe = this.reader.isWorking().then((working) => {
-          probing = false;
-          if (gen !== this.generation) return;
-          if (working) {
-            // Per-file problems, not a broken process. Those files keep their readError
-            // and get the per-row warning; reading continues.
-            failuresInARow = 0;
-          } else {
-            exiftoolFailed = true;
-            controller.abort();
-          }
-        });
-      }
-      report({ done, total, finished: false, exiftoolFailed });
-    };
+    report({ done, total, finished: false, exiftoolFailed: false }, true);
 
     const afterRead = async (): Promise<void> => {
-      try {
-        await this.reader.readAll(this.entries, undefined, 8, {
-          signal: controller.signal,
-          onResult: (p, meta) => {
-            if (ended || gen !== this.generation) return;
-            try {
-              record(p, meta);
-            } catch (e) {
-              // readAll waits for the files still open before it rejects; drop their results.
-              ended = true;
-              throw e;
-            }
-          },
-        });
-      } catch (e) {
-        // Something in handling a result threw (reading a file never throws: it records a
-        // readError). That is our bug, not a broken ExifTool, so stop without claiming it failed.
-        ended = true;
-        controller.abort();
-        if (gen === this.generation) console.error('Reading metadata stopped:', e);
-      }
-      // readAll's workers can drain (and its promise settle) while the last streak's probe is
-      // still in flight, e.g. when the failing files are near the tail of the batch. Wait for
-      // the probe's verdict so the final status accurately reflects it.
-      if (probe) await probe;
-      finish();
+      const result = await readMetadata(this.entries, this.reader, {
+        signal: controller.signal,
+        onResult: (p, meta, { exiftoolFailed }) => {
+          if (gen !== this.generation) return;
+          this.metadata.set(p, meta);
+          done += 1;
+          report({ done, total, finished: false, exiftoolFailed });
+        },
+      });
+      // Something in handling a result threw (reading a file never throws: it records a
+      // readError). That is our bug, not a broken ExifTool, so it isn't reported as one.
+      if ('error' in result && gen === this.generation) console.error('Reading metadata stopped:', result.error);
+      if (gen !== this.generation) return;
+      this.readingFinished = true;
+      report({ done, total, finished: true, exiftoolFailed: result.exiftoolFailed }, true);
     };
     this.reading = afterRead();
   }
@@ -371,12 +305,12 @@ export class Session {
     const buildId = this.latestBuild;
 
     const usesHash = patternUsesHash(settings.pattern);
-    if (usesHash) await this.hashMissing(included, controller.signal);
+    if (usesHash) await this.hashes.hashMissing(included, controller.signal);
     const stale = gen !== this.generation || this.batch !== null || buildId !== this.latestBuild;
     const plan = buildPlan({
       entries: this.entries,
       excluded,
-      metadata: usesHash ? this.metadataWithHashes(included) : this.metadata,
+      metadata: usesHash ? this.hashes.mergeInto(this.metadata, included) : this.metadata,
       settings,
       fs: createFsView(),
       platform: this.opts.platform,
@@ -391,45 +325,6 @@ export class Session {
     return toPlanView(plan, this.planComplete);
   }
 
-  /** Reads the hashes of the files that don't have a current one, HASH_CONCURRENCY at a time. */
-  private async hashMissing(entries: readonly FileEntry[], signal: AbortSignal): Promise<void> {
-    const todo = entries.filter((e) => !e.isDir && this.hashes.get(e.path)?.key !== sizeKey(e));
-    let next = 0;
-    const worker = async (): Promise<void> => {
-      while (next < todo.length) {
-        if (signal.aborted) return;
-        const entry = todo[next];
-        next += 1;
-        if (!entry) continue;
-        try {
-          const h = await hashFile(entry.path, signal);
-          this.hashes.set(entry.path, { key: sizeKey(entry), ...h });
-        } catch {
-          // Unreadable, or cancelled by a newer build: the token renders as a missing value.
-        }
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(HASH_CONCURRENCY, todo.length) }, worker));
-  }
-
-  /** The metadata map with current hashes merged in; the map itself when there are none. */
-  private metadataWithHashes(entries: readonly FileEntry[]): Map<string, FileMetadata> {
-    if (this.hashes.size === 0) return this.metadata;
-    const out = new Map(this.metadata);
-    for (const e of entries) {
-      const meta = this.withHash(e);
-      if (meta) out.set(e.path, meta);
-    }
-    return out;
-  }
-
-  /** The file's metadata with its current hashes, or undefined when it has none. */
-  private withHash(e: FileEntry): FileMetadata | undefined {
-    const h = this.hashes.get(e.path);
-    if (!h || h.key !== sizeKey(e)) return undefined;
-    return { ...(this.metadata.get(e.path) ?? fsMetadata(e, this.timeZone)), crc32: h.crc32, md5: h.md5 };
-  }
-
   /** Every token's value for the first file the current plan renames, for "All tokens…". */
   tokenValues(): TokenValues | null {
     const item = this.plan?.items.find((i) => i.kind !== 'excluded');
@@ -437,7 +332,7 @@ export class Session {
     const { settings } = this.plan;
     const entry = item.source;
     const meta = effectiveMetadata(
-      this.withHash(entry) ?? this.metadata.get(entry.path) ?? fsMetadata(entry, this.timeZone),
+      this.hashes.withHash(entry, this.metadata) ?? this.metadata.get(entry.path) ?? fsMetadata(entry, this.timeZone),
       settings.dates,
     );
     const rules = rulesFor(settings.findReplace, 'original');

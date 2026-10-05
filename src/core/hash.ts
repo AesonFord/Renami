@@ -22,11 +22,12 @@ export function crc32Hex(data: Uint8Array): string {
 
 /** Reads the file once and returns both hashes. Rejects with "Cancelled" once `signal` aborts. */
 export async function hashFile(filePath: string, signal?: AbortSignal): Promise<FileHashes> {
+  // Checked before opening: a stream destroyed while its file is still opening reports that open later.
+  if (signal?.aborted) throw new Error('Cancelled');
   const md5 = createHash('md5');
   let crc = 0;
   const stream = createReadStream(filePath, { highWaterMark: 1024 * 1024 });
   try {
-    if (signal?.aborted) throw new Error('Cancelled');
     for await (const chunk of stream) {
       if (signal?.aborted) throw new Error('Cancelled');
       const bytes = chunk as Buffer;

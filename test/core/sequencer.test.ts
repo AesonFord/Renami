@@ -85,8 +85,19 @@ describe('assignSequence: step and restarts', () => {
     expect([...assignSequence(sorted, { start: 1, restartPerFolder: false, restartEvery: 'year' }, dateOf).values()]).toEqual([1, 2, 3]);
   });
   it('combines folder and day restarts', () => {
-    const seq = assignSequence(sorted, { start: 1, restartPerFolder: true, restartEvery: 'day' }, dateOf);
-    expect(sorted.map((g) => seq.get(g.id))).toEqual([1, 1, 2]);
+    // In order: /p day 1, /q day 1, /p day 1, /p day 2. Folder alone gives 1,1,2,3 and day alone
+    // gives 1,2,3,1; only both together give 1,1,2,1.
+    const entries = [
+      makeEntry('/p/A.jpg'), makeEntry('/q/B.jpg'), makeEntry('/p/C.jpg'), makeEntry('/p/D.jpg'),
+    ];
+    const days = new Map([['/p/A.jpg', 1], ['/q/B.jpg', 1], ['/p/C.jpg', 1], ['/p/D.jpg', 2]]);
+    const ordered = buildGroups(entries, getMeta, true);
+    const dayOf = (g: ReturnType<typeof buildGroups>[number]) => wc(2024, 7, days.get(g.primary.path) ?? 1);
+    const run = (restartPerFolder: boolean, restartEvery: 'day' | 'never') =>
+      ordered.map((g) => assignSequence(ordered, { start: 1, restartPerFolder, restartEvery }, dayOf).get(g.id));
+    expect(run(true, 'never')).toEqual([1, 1, 2, 3]);
+    expect(run(false, 'day')).toEqual([1, 2, 3, 1]);
+    expect(run(true, 'day')).toEqual([1, 1, 2, 1]);
   });
   it('ignores restartEvery when no date is supplied', () => {
     const seq = assignSequence(sorted, { start: 1, restartPerFolder: false, restartEvery: 'day' });

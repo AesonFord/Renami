@@ -13,6 +13,7 @@ export default defineConfig({
           name: 'node',
           include: [
             'test/core/**/*.test.ts',
+            'test/cli/**/*.test.ts',
             'test/main/**/*.test.ts',
             'test/release/**/*.test.ts',
             'test/repo/**/*.test.ts',

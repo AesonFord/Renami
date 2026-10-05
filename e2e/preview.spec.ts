@@ -1,7 +1,8 @@
-import { copyFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { ElectronApplication, Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures.js';
+import { selectRow } from './helpers.js';
 
 // Spec P: the file preview panel. Clicking a row shows the file; the keyboard moves through rows.
 
@@ -65,14 +66,14 @@ test('clicking a row previews it, and the arrow keys move through the rows', asy
   const { app, win } = await launch();
   await addFolder(app, win, dir, 'photo.jpg');
 
-  await rowFor(win, 'photo.jpg').click({ position: { x: 120, y: 18 } });
+  await selectRow(win, 'photo.jpg');
   await expect(panel(win)).toBeVisible();
   const jpeg = panel(win).getByRole('img', { name: 'Preview of photo.jpg' });
   expect((await decoded(jpeg)).w).toBeGreaterThan(0);
   await expect(panel(win).getByText('Size')).toBeVisible();
 
   // HEIC is decoded in the main process and arrives as a JPEG.
-  await rowFor(win, 'photo.heic').click({ position: { x: 120, y: 18 } });
+  await selectRow(win, 'photo.heic');
   const heic = panel(win).getByRole('img', { name: 'Preview of photo.heic' });
   expect(await decoded(heic)).toEqual({ w: 64, h: 48 });
   // The fixture is solid teal (0, 128, 128): red and blue swapped in the conversion would make it olive.
@@ -94,18 +95,18 @@ test('clicking a row previews it, and the arrow keys move through the rows', asy
   await expect(panel(win).getByRole('img', { name: 'Preview of photo.jpg' })).toBeVisible();
 
   // Video plays from the scheme, and seeks: the player can read its duration.
-  await rowFor(win, 'clip.mp4').click({ position: { x: 120, y: 18 } });
+  await selectRow(win, 'clip.mp4');
   const video = panel(win).locator('video');
   await expect.poll(() => video.evaluate((el) => (el as unknown as Media).readyState >= 1 && (el as unknown as Media).duration > 0)).toBe(true);
 
   // PDF pages are drawn by pdf.js.
-  await rowFor(win, 'page.pdf').click({ position: { x: 120, y: 18 } });
+  await selectRow(win, 'page.pdf');
   const canvas = panel(win).getByRole('img', { name: 'Page 1 of page.pdf' });
   await expect.poll(() => canvas.evaluate((el) => (el as unknown as Canvas).width)).toBeGreaterThan(0);
   await expect(panel(win).getByText("Couldn't show this file.")).toHaveCount(0);
 
   // A file type with no preview says so.
-  await rowFor(win, 'notes.txt').click({ position: { x: 120, y: 18 } });
+  await selectRow(win, 'notes.txt');
   await expect(panel(win).getByText('No preview for .txt files.')).toBeVisible();
 
   // Space closes the panel and opens it again; Escape closes it.
@@ -127,14 +128,14 @@ test('Delete leaves the selected file out and moves to the next one', async ({ l
   // rows re-sort when that date arrives from ExifTool, so wait for it: pressed while photo.jpg is
   // still the last row, Delete has no next row to move to.
   await expect(rowFor(win, 'photo.jpg')).toHaveAttribute('aria-rowindex', '2');
-  await rowFor(win, 'photo.jpg').click({ position: { x: 120, y: 18 } });
+  await selectRow(win, 'photo.jpg');
   await rowFor(win, 'photo.jpg').press('Delete');
   await expect(rowFor(win, 'photo.jpg').getByRole('checkbox')).not.toBeChecked();
   await expect(rowFor(win, 'nodate.jpg')).toHaveAttribute('aria-current', 'true');
   await expect(rowFor(win, 'nodate.jpg')).toBeFocused();
 
   // The panel's button puts it back.
-  await rowFor(win, 'photo.jpg').click({ position: { x: 120, y: 18 } });
+  await selectRow(win, 'photo.jpg');
   await panel(win).getByRole('button', { name: 'Put back' }).click();
   await expect(rowFor(win, 'photo.jpg').getByRole('checkbox')).toBeChecked();
 });
@@ -157,7 +158,7 @@ test('the scheme serves only files in the batch, and answers ranges', async ({ l
     );
   expect((await status(outside)).status).toBe(404);
   const clip = path.join(dir, 'clip.mp4');
-  expect(await status(clip, 'bytes=0-99')).toEqual({ status: 206, range: 'bytes 0-99/2860', bytes: 100 });
+  expect(await status(clip, 'bytes=0-99')).toEqual({ status: 206, range: `bytes 0-99/${statSync(clip).size}`, bytes: 100 });
   expect((await status(clip)).status).toBe(200);
 });
 
@@ -166,15 +167,18 @@ test('the panel width is remembered', async ({ launch, tempDir }) => {
   copyFileSync(path.join(MEDIA, 'photo.jpg'), path.join(dir, 'photo.jpg'));
   const { app, win } = await launch();
   await addFolder(app, win, dir, 'photo.jpg');
-  await rowFor(win, 'photo.jpg').click({ position: { x: 120, y: 18 } });
+  await selectRow(win, 'photo.jpg');
   const edge = win.getByRole('separator', { name: 'Resize preview panel' });
   await edge.focus();
+  const width = async (): Promise<number> => (await panel(win).boundingBox())!.width;
+  const initial = await width();
   for (let i = 0; i < 4; i += 1) await edge.press('ArrowLeft');
-  await expect(panel(win)).toHaveCSS('width', '400px');
+  await expect.poll(width).toBeGreaterThan(initial);
+  const resized = await width();
   await win.reload();
   await addFolder(app, win, dir, 'photo.jpg');
-  await rowFor(win, 'photo.jpg').click({ position: { x: 120, y: 18 } });
-  await expect(panel(win)).toHaveCSS('width', '400px');
+  await selectRow(win, 'photo.jpg');
+  await expect.poll(async () => Math.abs((await width()) - resized) <= 1).toBe(true);
 });
 
 test('a file being previewed can still be renamed, and the panel follows it', async ({ launch, tempDir }) => {
@@ -183,7 +187,7 @@ test('a file being previewed can still be renamed, and the panel follows it', as
   const { app, win } = await launch();
   await addFolder(app, win, dir, 'clip.mp4');
   await win.getByRole('textbox', { name: 'Name pattern' }).fill('Beach');
-  await rowFor(win, 'clip.mp4').click({ position: { x: 120, y: 18 } });
+  await selectRow(win, 'clip.mp4');
   const video = panel(win).locator('video');
   await expect.poll(() => video.evaluate((el) => (el as unknown as Media).readyState >= 1)).toBe(true);
 

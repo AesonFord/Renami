@@ -32,6 +32,9 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: npm run build:cli
+      - name: Command line smoke test
+        run: node scripts/smoke-cli.mjs
       # Ubuntu 24.04 blocks the unprivileged user namespaces Chromium's sandbox needs.
       - name: Allow Electron's sandbox
         if: runner.os == 'Linux'

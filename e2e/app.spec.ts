@@ -31,7 +31,6 @@ test('adds a folder, previews a pattern, renames and undoes', async ({ launch, t
   await expect(win.getByRole('cell', { name: 'Trip_2024-07-05_001.heic', exact: true })).toBeVisible();
   await expect(win.getByRole('cell', { name: 'Trip_2024-07-05_001.jpg', exact: true })).toBeVisible();
   await expect(win.getByText('Paired').first()).toBeVisible();
-  await win.screenshot({ path: 'test-results/layout-b.png' });
 
   const rename = win.getByRole('button', { name: 'Rename 4 files' });
   await expect(rename).toBeEnabled();
