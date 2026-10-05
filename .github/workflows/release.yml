@@ -114,7 +114,7 @@ jobs:
         shell: bash
         run: |
           prefix="$(mktemp -d)"
-          npm install -g --prefix "$prefix" cli-package/renami-*.tgz
+          npm install -g --prefix "$prefix" ./cli-package/renami-*.tgz
           expected="$(node -p "require('./package.json').version")"
           actual="$("$prefix/bin/renami" --version)"
           if [ "$actual" != "$expected" ]; then
