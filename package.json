@@ -2,7 +2,7 @@
   "name": "renami",
   "productName": "Renami",
   "description": "Rename files in bulk from a pattern",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": "Renami",
   "license": "GPL-3.0-or-later",
   "private": true,
