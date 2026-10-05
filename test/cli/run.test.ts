@@ -11,6 +11,8 @@ import { runCommand, type RunContext } from '../../src/cli/run.js';
 const PATTERN = 'Hawaii_{date_taken:YYYY-MM-DD}_{seq:3}';
 /** Folder permissions only stop writes on POSIX, and never for root. */
 const canLockFolders = process.platform !== 'win32' && process.getuid?.() !== 0;
+/** Linux has no created date to set, so the setter these tests fail on is never called there. */
+const setsCreatedDates = process.platform !== 'linux';
 const dirs: string[] = [];
 afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
@@ -283,7 +285,7 @@ describe('renami rename', () => {
     }
   });
 
-  it('exits 5 and puts every file back when the rename fails partway', async () => {
+  it.skipIf(!setsCreatedDates)('exits 5 and puts every file back when the rename fails partway', async () => {
     const dir = mediaDir();
     const birthtime: BirthtimeSetter = {
       supported: true,
@@ -297,7 +299,7 @@ describe('renami rename', () => {
     expect(readdirSync(dir).sort()).toEqual(['clip.mp4', 'nodate.jpg', 'photo.jpg']);
   });
 
-  it('exits 5 and puts every file back when cancelled partway through renaming', async () => {
+  it.skipIf(!setsCreatedDates)('exits 5 and puts every file back when cancelled partway through renaming', async () => {
     const dir = mediaDir();
     const controller = new AbortController();
     // Cancels after the files were moved, while their dates are being set.
