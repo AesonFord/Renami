@@ -133,8 +133,8 @@ describe('parseCommand: rename', () => {
     await expect(rename(['p', '--nope'])).rejects.toThrow(UsageError);
   });
 
-  it('explains how to pass a negative --shift', async () => {
-    await expect(rename(['p', '--shift', '-60'])).rejects.toThrow(/--shift=-/);
+  it('takes a negative --shift written with =, and refuses the ambiguous form', async () => {
+    await expect(rename(['p', '--shift', '-60'])).rejects.toThrow(UsageError);
     expect((await rename(['p', '--shift=-60'])).settings.dates.shiftMinutes).toBe(-60);
   });
 

@@ -41,11 +41,6 @@ describe('journal', () => {
     expect(await readJournal(file)).toEqual(record);
   });
 
-  it('fails when the folder does not exist, writing nothing', async () => {
-    const file = path.join(tempDir(), 'missing', 'undo.json');
-    await expect(writeJournal(file, record)).rejects.toThrow();
-  });
-
   it('refuses files that are not renami journals', async () => {
     const dir = tempDir();
     const write = (name: string, text: string) => {

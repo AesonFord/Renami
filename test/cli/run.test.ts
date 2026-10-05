@@ -2,13 +2,15 @@ import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, mkdtemp
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { MetadataReader, type ExifToolLike, type Platform } from '../../src/core/index.js';
+import { CancelledError, MetadataReader, type BirthtimeSetter, type ExifToolLike, type Platform } from '../../src/core/index.js';
 import { parseCommand, type Command } from '../../src/cli/args.js';
 import { EXIT } from '../../src/cli/exit.js';
 import type { LaunchDeps } from '../../src/cli/launch.js';
 import { runCommand, type RunContext } from '../../src/cli/run.js';
 
 const PATTERN = 'Hawaii_{date_taken:YYYY-MM-DD}_{seq:3}';
+/** Folder permissions only stop writes on POSIX, and never for root. */
+const canLockFolders = process.platform !== 'win32' && process.getuid?.() !== 0;
 const dirs: string[] = [];
 afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
@@ -22,6 +24,17 @@ function mediaDir(): string {
   const dir = tempDir();
   for (const name of ['photo.jpg', 'clip.mp4', 'nodate.jpg']) copyFileSync(path.join('test/fixtures/media', name), path.join(dir, name));
   return dir;
+}
+
+/** A folder of small text files: ExifTool finds nothing in them, so names and dates come from the disk. */
+function textDir(names: string[]): string {
+  const dir = tempDir();
+  for (const n of names) writeFileSync(path.join(dir, n), n);
+  return dir;
+}
+
+function fakeExiftool(readRaw: (file: string) => Promise<object>, version: () => Promise<string> = async () => '12.0') {
+  return { readRaw, end: async () => {}, version } as unknown as ExifToolLike;
 }
 
 function capture() {
@@ -192,7 +205,7 @@ describe('renami rename', () => {
     expect(readdirSync(dir).filter((n) => n.startsWith('Hawaii_'))).toEqual([]);
   });
 
-  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+  it.skipIf(!canLockFolders)(
     'refuses a journal in a read-only folder, before renaming',
     async () => {
       const dir = mediaDir();
@@ -237,6 +250,94 @@ describe('renami rename', () => {
     expect(r.ended).toBe(1);
   });
 
+  it('warns and carries on when ExifTool stops working, using file system dates', async () => {
+    const dir = textDir(['a.txt', 'b.txt', 'c.txt', 'd.txt', 'e.txt', 'f.txt']);
+    const exiftool = fakeExiftool(
+      async () => {
+        throw new Error('exiftool exited');
+      },
+      async () => {
+        throw new Error('exiftool exited');
+      },
+    );
+    const r = await run(['rename', '.', '-p', '{name}_{modified:YYYY}'], dir, { exiftool });
+    expect(r.code).toBe(EXIT.ok);
+    expect(r.stderr).toContain("renami: ExifTool isn't working");
+    expect(r.stdout).toContain('6 to rename');
+  });
+
+  it.skipIf(!canLockFolders)('warns about a folder it cannot read and renames the rest', async () => {
+    const dir = textDir(['a.txt']);
+    const locked = path.join(dir, 'locked');
+    mkdirSync(locked);
+    writeFileSync(path.join(locked, 'b.txt'), 'b');
+    chmodSync(locked, 0o000);
+    try {
+      const r = await run(['rename', '.', '-r', '-p', '{name}_x'], dir, { exiftool: fakeExiftool(async () => ({})) });
+      expect(r.code).toBe(EXIT.ok);
+      expect(r.stderr).toContain(`renami: couldn't read the folder ${locked}; its files are left out`);
+      expect(r.stdout).toContain('a.txt -> a_x.txt');
+      expect(r.stdout).toContain('1 to rename');
+    } finally {
+      chmodSync(locked, 0o700);
+    }
+  });
+
+  it('exits 5 and puts every file back when the rename fails partway', async () => {
+    const dir = mediaDir();
+    const birthtime: BirthtimeSetter = {
+      supported: true,
+      set: async () => {
+        throw new Error('disk is gone');
+      },
+    };
+    const r = await run(['rename', '.', '-p', PATTERN, '--set-created', '--apply'], dir, { birthtime });
+    expect(r.code).toBe(EXIT.failed);
+    expect(r.stderr).toMatch(/^renami: The rename failed: disk is gone\. Every file was put back\./m);
+    expect(readdirSync(dir).sort()).toEqual(['clip.mp4', 'nodate.jpg', 'photo.jpg']);
+  });
+
+  it('exits 5 and puts every file back when cancelled partway through renaming', async () => {
+    const dir = mediaDir();
+    const controller = new AbortController();
+    // Cancels after the files were moved, while their dates are being set.
+    const birthtime: BirthtimeSetter = {
+      supported: true,
+      set: async () => {
+        controller.abort();
+        throw new CancelledError();
+      },
+    };
+    const r = await run(['rename', '.', '-p', PATTERN, '--set-created', '--apply', '--journal', 'undo.json'], dir, {
+      birthtime,
+      signal: controller.signal,
+    });
+    expect(r.code).toBe(EXIT.failed);
+    expect(r.stderr).toMatch(/^renami: Cancelled\. Every file was put back\./m);
+    expect(readdirSync(dir).sort()).toEqual(['clip.mp4', 'nodate.jpg', 'photo.jpg']);
+  });
+
+  it.skipIf(!canLockFolders)('exits 5 and says so when the journal cannot be written after renaming', async () => {
+    const dir = textDir(['a.txt', 'b.txt']);
+    const journalDir = tempDir();
+    // The folder passes the check before renaming, then turns read-only while files are read.
+    const exiftool = fakeExiftool(async () => {
+      chmodSync(journalDir, 0o500);
+      return {};
+    });
+    try {
+      const r = await run(['rename', '.', '-p', '{name}_x', '--apply', '--journal', path.join(journalDir, 'undo.json')], dir, {
+        exiftool,
+      });
+      expect(r.code).toBe(EXIT.failed);
+      expect(r.stderr).toContain("renami: the files were renamed, but the journal couldn't be written");
+      expect(readdirSync(dir).sort()).toEqual(['a_x.txt', 'b_x.txt']);
+      expect(readdirSync(journalDir)).toEqual([]);
+    } finally {
+      chmodSync(journalDir, 0o700);
+    }
+  });
+
   it('prints only errors with --quiet', async () => {
     const r = await run(['rename', mediaDir(), '-p', PATTERN, '-q'], tempDir());
     expect(r.code).toBe(EXIT.ok);
@@ -254,6 +355,18 @@ describe('renami undo', () => {
     expect(r.stderr).toContain('renami: skipped Hawaii_2024-07-04_001.jpg: Changed since the rename');
     expect(readdirSync(dir)).toContain('clip.mp4');
     expect(existsSync(path.join(dir, 'undo.json.undone'))).toBe(true);
+  });
+
+  it('exits 5 and keeps the journal when the undo is cancelled', async () => {
+    const dir = mediaDir();
+    await run(['rename', '.', '-p', PATTERN, '--apply', '--journal', 'undo.json'], dir);
+    const controller = new AbortController();
+    controller.abort();
+    const r = await run(['undo', 'undo.json'], dir, { signal: controller.signal });
+    expect(r.code).toBe(EXIT.failed);
+    expect(r.stderr).toMatch(/^renami: undo cancelled/m);
+    expect(readdirSync(dir).filter((n) => n.startsWith('Hawaii_'))).toHaveLength(3);
+    expect(existsSync(path.join(dir, 'undo.json'))).toBe(true);
   });
 
   it('exits 1 for a missing or invalid journal', async () => {
