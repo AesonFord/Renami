@@ -9,7 +9,7 @@ const CANDIDATES = [
   'dist/mac-arm64/Renami.app/Contents/MacOS/Renami',
   'dist/mac/Renami.app/Contents/MacOS/Renami',
   'dist/win-unpacked/Renami.exe',
-  'dist/linux-unpacked/renami',
+  'dist/linux-unpacked/renami-app',
 ];
 
 test('the packaged app reads photo metadata with its bundled ExifTool', async ({ launch, tempDir }) => {

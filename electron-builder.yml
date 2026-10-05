@@ -53,7 +53,9 @@ nsis:
 linux:
   target: [AppImage, deb]
   category: Utility
-  executableName: renami
+  # Not "renami": that name belongs to the npm command line (src/cli), which opens this app
+  # for bare paths. The .deb links /usr/bin/renami-app.
+  executableName: renami-app
   icon: build/renami-logo.png
   maintainer: Renami
   # ${arch} is x86_64 for AppImage and amd64 for deb: each format's own spelling.

@@ -38,7 +38,7 @@ describe('unpackedApps', () => {
       { arch: 'x64', app: 'dist/win-unpacked/Renami.exe', exe: 'dist/win-unpacked/Renami.exe' },
     ]);
     expect(unpackedApps('linux')).toEqual([
-      { arch: 'x64', app: 'dist/linux-unpacked/renami', exe: 'dist/linux-unpacked/renami' },
+      { arch: 'x64', app: 'dist/linux-unpacked/renami-app', exe: 'dist/linux-unpacked/renami-app' },
     ]);
   });
 
