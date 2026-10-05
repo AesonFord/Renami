@@ -28,7 +28,56 @@ If Electron starts as plain Node ("does not provide an export named 'BrowserWind
 
 ## Open with Renami
 
-Drop a folder or files on the app icon (macOS), choose the app in "Open With", right-click a folder in Explorer and pick "Rename with Renami" (Windows, added by the installer), or run `renami <paths…>` from a terminal. A second launch hands its paths to the window that is already open.
+Drop a folder or files on the app icon (macOS), choose the app in "Open With", or right-click a folder in Explorer and pick "Rename with Renami" (Windows, added by the installer). From a terminal, `renami <paths…>` opens the app with those files once the [command line](#command-line) is installed. On Linux, the .deb also puts the app itself on PATH as `renami-app`. A second launch hands its paths to the window that is already open.
+
+## Command line
+
+`renami` renames files from a terminal, a script or CI, with the same engine as the app. It needs Node 22 or later:
+
+```bash
+npm install -g renami
+```
+
+It never changes anything without `--apply`:
+
+```bash
+renami rename ~/Photos/Hawaii -p 'Hawaii_{date_taken:YYYY-MM-DD}_{seq:3}'                            # preview
+renami rename ~/Photos/Hawaii -p 'Hawaii_{date_taken:YYYY-MM-DD}_{seq:3}' --apply --journal undo.json  # rename
+renami undo undo.json                                                                                # put it all back
+```
+
+`--journal` records the batch, so `renami undo` can reverse it at any time, even after other runs. It skips files that changed since. `renami tokens` lists the tokens, and `renami --help` lists every option.
+
+Settings the app can save, such as find & replace rules, extension maps and filters, can also be given as a JSON file. Flags override it:
+
+```json
+{
+  "pattern": "{date_taken:YYYY-MM-DD}_{seq:3}",
+  "sequence": { "sortBy": "dateTaken", "restartEvery": "day" },
+  "findReplace": [{ "find": "^IMG_", "replace": "", "regex": true, "matchCase": false }],
+  "cleanup": { "extensionRules": [{ "from": "jpeg", "to": "jpg" }] },
+  "filter": { "includeSubfolders": true, "extensions": ["jpg", "heic"] }
+}
+```
+
+```bash
+renami rename ~/Photos --settings trip.json --json   # the plan as one JSON object
+```
+
+A negative clock shift needs an `=`: `--shift=-60`.
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Done, or a dry run found no problems |
+| 1 | Usage error: a bad option, a missing path, or an unreadable settings or journal file |
+| 2 | Invalid pattern |
+| 3 | Some files can't be renamed (nothing was renamed) |
+| 4 | Files changed between the plan and the rename (nothing was renamed) |
+| 5 | The rename or undo failed or was cancelled; anything moved was put back where possible |
+| 6 | The undo skipped some files |
+| 7 | `renami <paths…>`: the desktop app was not found |
+
+`renami <paths…>`, with no command, opens the desktop app.
 
 ## Test it
 
@@ -36,6 +85,7 @@ Drop a folder or files on the app icon (macOS), choose the app in "Open With", r
 npm test             # unit and integration tests (Vitest)
 npm run typecheck    # both TypeScript configs
 npm run e2e          # builds the app, then runs the Playwright tests
+npm run build:cli    # the npm command line, into out/cli
 ```
 
 ## Package it
@@ -70,6 +120,14 @@ git tag v0.2.0 && git push origin v0.2.0   # tag the merged commit on main
 The tag starts `.github/workflows/release.yml`. It checks the tag is on `main`, builds the installers on macOS, Windows and Linux from the hardened config (`electron-builder.release.yml`), checks each build's fuses, launches it, and publishes all five installers as one GitHub Release, with a `SHA256SUMS` file and a build provenance attestation. A version with a `-` (`0.2.0-beta.0`) is published as a prerelease.
 
 If any platform fails, nothing is released. Release tags can't be deleted or moved, so fix it and release the next patch version the same way. Never tag the release branch: the squash merge gives `main` a different commit, and the tag would never be on `main`.
+
+Each release also packs the command line (`renami-<version>.tgz`, attached to the release) and publishes it to npm with [trusted publishing](https://docs.npmjs.com/trusted-publishers), so the repository holds no npm token. One-time setup:
+
+1. Publish the first version by hand: download `renami-<version>.tgz` from a release (or from a manual run's `cli-package` artifact), then run `npm publish renami-<version>.tgz --access public` while logged in to npm. Trusted publishing can only be set up on a package that exists. Check npm's docs in case this is no longer needed.
+2. On npmjs.com, open the package's settings and add a trusted publisher: GitHub Actions, repository `AesonFord/Renami`, workflow `release.yml`.
+3. Set the repository variable `NPM_PUBLISH` to `true` (Settings → Secrets and variables → Actions → Variables).
+
+Until then, releases skip the npm publish and only attach the tarball. A tag with a `-` publishes under npm's `next` tag. If a release fails after its draft was created (for example at the npm publish), delete the draft release before re-running the workflow; if npm already has that version, make the draft public by hand with `gh release edit <tag> --draft=false` instead.
 
 To check a downloaded installer:
 
