@@ -44,7 +44,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^5.0.2",
     "builder-util-runtime": "9.7.0",
-    "electron": "44.4.5",
+    "electron": "44.5.1",
     "electron-builder": "^26.15.3",
     "electron-vite": "5.0.0",
     "esbuild": "0.28.2",
