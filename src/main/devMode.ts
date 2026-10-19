@@ -7,3 +7,12 @@ export function devRendererUrl(isPackaged: boolean, env: Record<string, string |
   if (isPackaged) return null;
   return env.ELECTRON_RENDERER_URL || null;
 }
+
+/**
+ * A stand-in for GitHub's latest-release feed, for trying the update dialogs by hand. A packaged
+ * app must ignore RENAMI_UPDATE_FEED: the feed chooses the version offered and its release page.
+ */
+export function devUpdateFeed(isPackaged: boolean, env: Record<string, string | undefined>): string | null {
+  if (isPackaged) return null;
+  return env.RENAMI_UPDATE_FEED || null;
+}

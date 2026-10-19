@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { devRendererUrl } from '../../src/main/devMode.js';
+import { devRendererUrl, devUpdateFeed } from '../../src/main/devMode.js';
 
 describe('devRendererUrl', () => {
   it('gives the dev server URL when unpackaged and the env var is set', () => {
@@ -13,5 +13,20 @@ describe('devRendererUrl', () => {
   it('is null when the env var is missing or empty', () => {
     expect(devRendererUrl(false, {})).toBeNull();
     expect(devRendererUrl(false, { ELECTRON_RENDERER_URL: '' })).toBeNull();
+  });
+});
+
+describe('devUpdateFeed', () => {
+  it('gives the override when unpackaged', () => {
+    expect(devUpdateFeed(false, { RENAMI_UPDATE_FEED: 'http://localhost:9/x' })).toBe('http://localhost:9/x');
+  });
+
+  it('ignores the override when packaged', () => {
+    expect(devUpdateFeed(true, { RENAMI_UPDATE_FEED: 'http://localhost:9/x' })).toBeNull();
+  });
+
+  it('is null when the env var is missing or empty', () => {
+    expect(devUpdateFeed(false, {})).toBeNull();
+    expect(devUpdateFeed(false, { RENAMI_UPDATE_FEED: '' })).toBeNull();
   });
 });

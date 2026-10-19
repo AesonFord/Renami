@@ -57,6 +57,8 @@ export async function launch(opts: { executablePath?: string } = {}): Promise<La
     if (value !== undefined && key !== 'ELECTRON_RUN_AS_NODE') env[key] = value;
   }
   env.RENAMI_USER_DATA_DIR = userData;
+  // The packaged-app tests must not ask GitHub for releases.
+  env.RENAMI_NO_UPDATE_CHECK = '1';
   let app: ElectronApplication | undefined;
   try {
     app = opts.executablePath
