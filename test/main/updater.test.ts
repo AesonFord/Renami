@@ -22,11 +22,12 @@ const release = (tag = 'v0.3.0') => ({
 const ok = (json: unknown) => Promise.resolve(new Response(JSON.stringify(json), { status: 200 }));
 
 /** A UpdateUi that records every call and answers the update prompt with `choice`. */
-function fakeUi(choice: UpdateChoice = 'later') {
+function fakeUi(choice: UpdateChoice = 'later', hold?: Promise<void>) {
   const calls: { method: string; args: unknown[] }[] = [];
   const ui: UpdateUi = {
     showAvailable: async (info) => {
       calls.push({ method: 'showAvailable', args: [info] });
+      await hold;
       return choice;
     },
     showUpToDate: async (current) => {
@@ -42,10 +43,12 @@ function fakeUi(choice: UpdateChoice = 'later') {
   return { ui, calls };
 }
 
-async function setup(opts: { fetch?: UpdateCheckerDeps['fetch']; choice?: UpdateChoice; current?: string; prefs?: Partial<UpdatePrefs> } = {}) {
+async function setup(
+  opts: { fetch?: UpdateCheckerDeps['fetch']; choice?: UpdateChoice; hold?: Promise<void>; current?: string; prefs?: Partial<UpdatePrefs> } = {},
+) {
   const prefsFile = path.join(mkdtempSync(path.join(tmpdir(), 'renami-updater-')), 'updates.json');
   if (opts.prefs) await saveUpdatePrefs(prefsFile, { autoCheck: true, skippedVersion: null, lastCheckedAt: null, ...opts.prefs });
-  const { ui, calls } = fakeUi(opts.choice);
+  const { ui, calls } = fakeUi(opts.choice, opts.hold);
   const timers: { fn: () => void; ms: number }[] = [];
   const fetch = vi.fn(opts.fetch ?? (() => ok(release())));
   const checker = new UpdateChecker({
@@ -169,6 +172,33 @@ describe('UpdateChecker', () => {
     answer(new Response(JSON.stringify(release()), { status: 200 }));
     await both;
     expect(fetch).toHaveBeenCalledTimes(1);
+    expect(calls.map((c) => c.method)).toEqual(['showAvailable']);
+  });
+
+  it.each([
+    ['up to date', () => ok(release('v0.2.2')), 'showUpToDate'],
+    ['failing', () => Promise.resolve(new Response('', { status: 500 })), 'showError'],
+  ] as const)('a manual check during an auto check still answers when %s', async (_name, answerWith, method) => {
+    let answer!: () => void;
+    const gate = new Promise<void>((resolve) => (answer = resolve));
+    const { checker, calls, fetch } = await setup({ fetch: () => gate.then(answerWith) });
+    const both = Promise.all([checker.checkNow(false), checker.checkNow(true)]);
+    answer();
+    await both;
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(calls.map((c) => c.method)).toEqual([method]);
+  });
+
+  it('a manual check while an update dialog is open sends no request', async () => {
+    let close!: () => void;
+    const hold = new Promise<void>((resolve) => (close = resolve));
+    const { checker, calls, fetch } = await setup({ hold });
+    const auto = checker.checkNow(false);
+    await vi.waitFor(() => expect(calls.map((c) => c.method)).toEqual(['showAvailable']));
+    await checker.checkNow(true);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    close();
+    await auto;
     expect(calls.map((c) => c.method)).toEqual(['showAvailable']);
   });
 

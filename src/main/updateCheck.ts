@@ -8,8 +8,19 @@ export const RELEASES_PAGE = 'https://github.com/AesonFord/Renami/releases/lates
 export const FEED_URL = 'https://api.github.com/repos/AesonFord/Renami/releases/latest';
 export const AUTO_CHECK_INTERVAL_MS = 86_400_000;
 
-/** The feed is untrusted: only links under this prefix are ever opened. */
-const TRUSTED_PREFIX = 'https://github.com/AesonFord/Renami/';
+/**
+ * The feed is untrusted: only links into the repository are ever opened. Checked on the parsed
+ * URL, so dot-segments (`Renami/../../evil`) can't walk out of it.
+ */
+function trusted(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && u.host === 'github.com' && u.pathname.startsWith('/AesonFord/Renami/') ? u.href : null;
+  } catch {
+    return null;
+  }
+}
 
 export interface Version {
   major: number;
@@ -97,7 +108,7 @@ export function installerName(platform: NodeJS.Platform, arch: string, isAppImag
 export function downloadUrl(release: Release, platform: NodeJS.Platform, arch: string, isAppImage: boolean): string {
   const name = installerName(platform, arch, isAppImage);
   const asset = release.assets.find((a) => a.name === name)?.url;
-  return [asset, release.pageUrl].find((url) => url?.startsWith(TRUSTED_PREFIX)) ?? RELEASES_PAGE;
+  return trusted(asset) ?? trusted(release.pageUrl) ?? RELEASES_PAGE;
 }
 
 /** Release notes as plain text for a dialog, cut at a word boundary. */

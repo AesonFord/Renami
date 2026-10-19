@@ -75,22 +75,31 @@ export class UpdateChecker {
     if (this.prefs.autoCheck) this.schedule(delayMs);
   }
 
-  /** Never rejects. */
+  /** Never rejects. While an update dialog is open it does nothing: that dialog is the answer. */
   async checkNow(manual: boolean): Promise<void> {
+    if (this.dialogOpen) return;
     try {
       this.inFlight ??= this.fetchLatest().finally(() => {
         this.inFlight = null;
       });
-      const outcome = await this.inFlight;
-      if (this.dialogOpen) return;
-      this.dialogOpen = true;
-      try {
-        await this.answer(outcome, manual);
-      } finally {
-        this.dialogOpen = false;
-      }
+      await this.answer(await this.inFlight, manual);
     } catch (error) {
       console.warn('update check failed', error);
+    }
+  }
+
+  /**
+   * Shows one dialog, unless one is already open (two checks that shared a request), in which
+   * case it returns undefined. Held only around a dialog, so a silent automatic check never
+   * swallows the answer to a manual one.
+   */
+  private async dialog<T>(show: () => Promise<T>): Promise<T | undefined> {
+    if (this.dialogOpen) return undefined;
+    this.dialogOpen = true;
+    try {
+      return await show();
+    } finally {
+      this.dialogOpen = false;
     }
   }
 
@@ -98,16 +107,18 @@ export class UpdateChecker {
     const { ui, currentVersion } = this.deps;
     if ('error' in outcome) {
       console.warn('update check failed', outcome.error);
-      if (manual) await ui.showError(outcome.error.message);
+      if (manual) await this.dialog(() => ui.showError(outcome.error.message));
       return;
     }
     const { release } = outcome;
     if (!release || compareVersions(release.version, currentVersion) <= 0) {
-      if (manual) await ui.showUpToDate(currentVersion);
+      if (manual) await this.dialog(() => ui.showUpToDate(currentVersion));
       return;
     }
     if (!manual && this.prefs.skippedVersion === release.version) return;
-    const choice = await ui.showAvailable({ current: currentVersion, latest: release.version, notes: notesExcerpt(release.notes) });
+    const choice = await this.dialog(() =>
+      ui.showAvailable({ current: currentVersion, latest: release.version, notes: notesExcerpt(release.notes) }),
+    );
     if (choice === 'download') {
       ui.openDownload(downloadUrl(release, this.deps.platform, this.deps.arch, this.deps.isAppImage));
     } else if (choice === 'skip') {

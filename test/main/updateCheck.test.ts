@@ -115,6 +115,18 @@ describe('downloadUrl', () => {
     const lookalike: Release = { ...release, assets: [], pageUrl: 'https://github.com/AesonFord/Renami-evil/' };
     expect(downloadUrl(lookalike, 'darwin', 'arm64', false)).toBe(RELEASES_PAGE);
   });
+
+  it.each([
+    'https://github.com/AesonFord/Renami/../../evil/x/Renami-mac-arm64.dmg',
+    'https://github.com/AesonFord/Renami/%2e%2e/%2e%2e/evil/x',
+    'https://github.com/AesonFord/Renami/..\\..\\evil\\x',
+    'http://github.com/AesonFord/Renami/releases/latest',
+    'https://github.com.evil.example/AesonFord/Renami/x',
+    'not a url',
+  ])('never returns a link that resolves off the repository (%s)', (url) => {
+    const sneaky: Release = { ...release, pageUrl: url, assets: [{ name: 'Renami-mac-arm64.dmg', url }] };
+    expect(downloadUrl(sneaky, 'darwin', 'arm64', false)).toBe(RELEASES_PAGE);
+  });
 });
 
 describe('notesExcerpt', () => {
