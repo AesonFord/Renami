@@ -124,3 +124,13 @@ describe('check-fuses.mjs', () => {
     expect(run.status).not.toBe(0);
   });
 });
+
+describe('release.yml', () => {
+  // npm reads a tarball path without ./ (dir/pkg.tgz) as a GitHub owner/repo and tries to clone it.
+  it('passes every local tarball to npm as a ./ path', () => {
+    const workflow = readFileSync('.github/workflows/release.yml', 'utf8');
+    const tarballs = [...workflow.matchAll(/\bnpm (?:install|publish)\b[^\n]*?(\S+\.tgz)/g)].map((m) => m[1]);
+    expect(tarballs).toHaveLength(2);
+    expect(tarballs.filter((p) => !p.startsWith('./'))).toEqual([]);
+  });
+});
