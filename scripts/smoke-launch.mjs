@@ -22,7 +22,8 @@ if (!target) {
 // A throwaway profile, so the check never touches real presets and every log line is from this run.
 const userData = mkdtempSync(path.join(tmpdir(), 'renami-smoke-'));
 const child = spawn(target.exe, [], {
-  env: { ...process.env, RENAMI_USER_DATA_DIR: userData },
+  // RENAMI_NO_UPDATE_CHECK keeps the launch off the network: CI must not ask GitHub for releases.
+  env: { ...process.env, RENAMI_USER_DATA_DIR: userData, RENAMI_NO_UPDATE_CHECK: '1' },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 let output = '';

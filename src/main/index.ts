@@ -8,10 +8,12 @@ import {
   ipcMain,
   Menu,
   nativeTheme,
+  net,
   protocol,
   session as webSession,
   shell,
   type IpcMainInvokeEvent,
+  type MessageBoxOptions,
   type OpenDialogOptions,
 } from 'electron';
 import type { Platform } from '../core/types.js';
@@ -36,11 +38,13 @@ import {
   type LongWaitNote,
 } from './quitGuard.js';
 import { Session } from './session.js';
-import { devRendererUrl } from './devMode.js';
+import { devRendererUrl, devUpdateFeed } from './devMode.js';
 import { APP_ORIGIN, APP_SCHEME, assetMime, resolveAppPath } from './appServer.js';
 import { menuTemplate } from './menu.js';
 import { appendLog, appendLogSync, crashLoopMessage, reloadLimiter } from './crash.js';
 import { progressFraction } from './progress.js';
+import { FEED_URL } from './updateCheck.js';
+import { UpdateChecker, type UpdateChoice, type UpdateUi } from './updater.js';
 
 // Tests point this at a temp folder so they never touch the user's presets. Honored in packaged
 // builds too: e2e/packaged.spec.ts drives the real app and must not write real userData. It only
@@ -287,6 +291,36 @@ function windowBackground(): string {
   return nativeTheme.shouldUseDarkColors ? '#161615' : '#f4f3f0';
 }
 
+/** The update check's dialogs, over the window when there is one. */
+function updateUi(): UpdateUi {
+  const show = (options: MessageBoxOptions) => {
+    const win = liveWindow();
+    return win ? dialog.showMessageBox(win, options) : dialog.showMessageBox(options);
+  };
+  const choices: UpdateChoice[] = ['download', 'skip', 'later'];
+  return {
+    showAvailable: async ({ current, latest, notes }) => {
+      const { response } = await show({
+        type: 'info',
+        buttons: ['Download', 'Skip This Version', 'Later'],
+        defaultId: 0,
+        cancelId: 2,
+        message: `Renami ${latest} is available`,
+        detail: notes ? `You have ${current}.\n\n${notes}` : `You have ${current}.`,
+      });
+      return choices[response] ?? 'later';
+    },
+    showUpToDate: async (current) => {
+      await show({ type: 'info', buttons: ['OK'], message: 'Renami is up to date', detail: `${current} is the newest version.` });
+    },
+    showError: async (message) => {
+      await show({ type: 'warning', buttons: ['OK'], message: "Couldn't check for updates", detail: message });
+    },
+    // updateCheck.downloadUrl only ever hands over a github.com/AesonFord/Renami/ link.
+    openDownload: (url) => shell.openExternal(url),
+  };
+}
+
 /** A renderer that dies on every load would otherwise be reloaded forever. */
 const CRASH_RELOADS = { max: 3, windowMs: 60_000 };
 
@@ -367,14 +401,37 @@ function createWindow(devUrl: string | null): BrowserWindow {
   return win;
 }
 
-void app.whenReady().then(() => {
+void app.whenReady().then(async () => {
   const devUrl = devRendererUrl(app.isPackaged, process.env);
-  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate(process.platform, devUrl !== null)));
+  const updater = new UpdateChecker({
+    currentVersion: app.getVersion(),
+    platform: process.platform,
+    arch: process.arch,
+    isAppImage: Boolean(process.env.APPIMAGE),
+    feedUrl: devUpdateFeed(app.isPackaged, process.env) ?? FEED_URL,
+    fetch: (url, init) => net.fetch(url, init),
+    prefsFile: path.join(app.getPath('userData'), 'updates.json'),
+    ui: updateUi(),
+  });
+  await updater.init();
+  // Rebuilt when the checkbox changes, so the menu always shows the saved setting.
+  const buildMenu = (): void =>
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate(
+        menuTemplate(process.platform, devUrl !== null, {
+          autoCheck: updater.autoCheck,
+          checkNow: () => void updater.checkNow(true),
+          setAutoCheck: (on) => void updater.setAutoCheck(on).then(buildMenu),
+        }),
+      ),
+    );
+  buildMenu();
   // Deny every Chromium permission (camera, mic, geolocation, notifications) except fullscreen:
   // that one is requestFullscreen(), which the preview panel's <video controls> button calls.
   webSession.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => callback(permission === 'fullscreen'));
   webSession.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === 'fullscreen');
-  // The spellchecker downloads dictionaries from Google on Windows/Linux; the app is offline.
+  // The spellchecker downloads dictionaries from Google on Windows/Linux. The app makes no other
+  // network requests; the update check (updater.ts) is the one exception.
   webSession.defaultSession.spellCheckerEnabled = false;
   // Installing these replaces Electron's default error dialog: log first, then still tell the user.
   process.on('uncaughtException', (error) => {
@@ -423,6 +480,8 @@ void app.whenReady().then(() => {
     }
   });
   mainWindow = createWindow(devUrl);
+  // Packaged builds only; CI sets RENAMI_NO_UPDATE_CHECK so launches there stay off the network.
+  if (app.isPackaged && process.env.RENAMI_NO_UPDATE_CHECK !== '1') updater.startAuto(10_000);
   openPaths.add(pathsFromArgv(process.argv, app.isPackaged, process.cwd()));
   // The page follows the OS color mode through prefers-color-scheme; the window has to be told.
   nativeTheme.on('updated', () => {

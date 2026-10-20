@@ -106,6 +106,16 @@ The builds have no Developer ID or Authenticode signature:
 On Linux:
 - On Ubuntu 24.04 and later, AppArmor's limit on unprivileged user namespaces can stop the AppImage from starting. Install the `.deb` instead, or allow the AppImage with an AppArmor profile.
 
+## Updates
+
+The installed app asks `api.github.com` for the latest release at most once a day. The request sends only Renami's version, in the User-Agent. When a newer version is out, Renami offers to open its download. Installing it is up to you: the builds aren't signed, so Renami can't update itself.
+
+To turn the daily check off, clear "Check for Updates Automatically". It's in the Renami menu on macOS and the Help menu on Windows and Linux. "Check for Updates…" in the same menu checks right away.
+
+For testing:
+- `RENAMI_NO_UPDATE_CHECK=1` turns off the daily check. The smoke launch and the e2e tests set it.
+- `RENAMI_UPDATE_FEED=<url>` points `npm run dev` at a stand-in for GitHub's latest-release JSON. Packaged builds ignore it.
+
 ## Release it
 
 `main` only takes squash-merged PRs, so bump the version in a PR, then tag the merged commit:

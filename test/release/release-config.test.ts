@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { FuseState } from '@electron/fuses';
 import { describe, expect, it } from 'vitest';
 import { fuseMismatches, installerNames, releaseFuses, unpackedApps } from '../../scripts/release-config.mjs';
+import { installerName } from '../../src/main/updateCheck.js';
 
 const toCrlf = (text: string) => text.replace(/\n/g, '\r\n');
 
@@ -25,6 +26,13 @@ describe('installerNames', () => {
   it('reads a CRLF checkout of electron-builder.yml the same as the LF original', () => {
     const crlfYml = toCrlf(readFileSync('electron-builder.yml', 'utf8'));
     expect(installerNames('win', crlfYml)).toEqual(installerNames('win'));
+  });
+
+  // The app keeps its own copy of these names (src/main/updateCheck.ts) to link the right download.
+  it('matches the installers the update check links to', () => {
+    expect(installerNames('mac')).toEqual([installerName('darwin', 'arm64', false), installerName('darwin', 'x64', false)]);
+    expect(installerNames('win')).toEqual([installerName('win32', 'x64', false)]);
+    expect(installerNames('linux')).toEqual([installerName('linux', 'x64', true), installerName('linux', 'x64', false)]);
   });
 });
 
