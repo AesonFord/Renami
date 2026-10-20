@@ -39,7 +39,7 @@ function writeDated(dir: string, files: Record<string, Date>): string {
 
 const pattern = (win: Page): Locator => win.getByRole('textbox', { name: 'Name pattern' });
 const rowFor = (win: Page, text: string): Locator => win.getByRole('row').filter({ hasText: text });
-const tab = (win: Page, label: string): Locator => win.getByRole('tab', { name: new RegExp(`^${label.replace(/[&]/g, '\\$&')}`) });
+const tab = (win: Page, label: string): Locator => win.getByRole('tab', { name: new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`) });
 const cell = (row: Locator, name: string): Locator => row.getByRole('cell', { name, exact: true });
 
 test('numbers newest first, and restarts the count each day', async ({ launch, tempDir }) => {

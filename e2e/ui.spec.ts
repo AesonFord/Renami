@@ -39,7 +39,7 @@ const pattern = (win: Page): Locator => win.getByRole('textbox', { name: 'Name p
 const renameButton = (win: Page): Locator => win.getByRole('button', { name: /^(Rename|Change dates on)/ });
 const summary = (win: Page): Locator => win.locator('.summary');
 const rowFor = (win: Page, text: string): Locator => win.getByRole('row').filter({ hasText: text });
-const tab = (win: Page, label: string): Locator => win.getByRole('tab', { name: new RegExp(`^${label.replace(/[&]/g, '\\$&')}`) });
+const tab = (win: Page, label: string): Locator => win.getByRole('tab', { name: new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`) });
 
 /** Puts the caret `fromEnd` characters before the end of the pattern and presses Enter, which opens that token's editor. */
 async function openTokenAt(win: Page, fromEnd: number): Promise<void> {
