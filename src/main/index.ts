@@ -317,7 +317,7 @@ function updateUi(): UpdateUi {
       await show({ type: 'warning', buttons: ['OK'], message: "Couldn't check for updates", detail: message });
     },
     // updateCheck.downloadUrl only ever hands over a github.com/AesonFord/Renami/ link.
-    openDownload: (url) => void shell.openExternal(url),
+    openDownload: (url) => shell.openExternal(url),
   };
 }
 

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTO_CHECK_INTERVAL_MS, notesExcerpt } from '../../src/main/updateCheck.js';
 import { loadUpdatePrefs, saveUpdatePrefs, type UpdatePrefs } from '../../src/main/updatePrefs.js';
-import { UpdateChecker, type UpdateCheckerDeps, type UpdateChoice, type UpdateUi } from '../../src/main/updater.js';
+import { AUTO_CHECK_POLL_MS, UpdateChecker, type UpdateCheckerDeps, type UpdateChoice, type UpdateUi } from '../../src/main/updater.js';
 
 const NOW = 1_760_000_000_000;
 const MAC_ARM_URL = 'https://github.com/AesonFord/Renami/releases/download/v0.3.0/Renami-mac-arm64.dmg';
@@ -22,7 +22,7 @@ const release = (tag = 'v0.3.0') => ({
 const ok = (json: unknown) => Promise.resolve(new Response(JSON.stringify(json), { status: 200 }));
 
 /** A UpdateUi that records every call and answers the update prompt with `choice`. */
-function fakeUi(choice: UpdateChoice = 'later', hold?: Promise<void>) {
+function fakeUi(choice: UpdateChoice = 'later', hold?: Promise<void>, openFails = false) {
   const calls: { method: string; args: unknown[] }[] = [];
   const ui: UpdateUi = {
     showAvailable: async (info) => {
@@ -36,20 +36,29 @@ function fakeUi(choice: UpdateChoice = 'later', hold?: Promise<void>) {
     showError: async (message) => {
       calls.push({ method: 'showError', args: [message] });
     },
-    openDownload: (url) => {
+    openDownload: async (url) => {
       calls.push({ method: 'openDownload', args: [url] });
+      if (openFails) throw new Error('No application found to open the URL');
     },
   };
   return { ui, calls };
 }
 
 async function setup(
-  opts: { fetch?: UpdateCheckerDeps['fetch']; choice?: UpdateChoice; hold?: Promise<void>; current?: string; prefs?: Partial<UpdatePrefs> } = {},
+  opts: {
+    fetch?: UpdateCheckerDeps['fetch'];
+    choice?: UpdateChoice;
+    hold?: Promise<void>;
+    openFails?: boolean;
+    current?: string;
+    prefs?: Partial<UpdatePrefs>;
+    now?: () => number;
+  } = {},
 ) {
   const prefsFile = path.join(mkdtempSync(path.join(tmpdir(), 'renami-updater-')), 'updates.json');
   if (opts.prefs) await saveUpdatePrefs(prefsFile, { autoCheck: true, skippedVersion: null, lastCheckedAt: null, ...opts.prefs });
-  const { ui, calls } = fakeUi(opts.choice, opts.hold);
-  const timers: { fn: () => void; ms: number }[] = [];
+  const { ui, calls } = fakeUi(opts.choice, opts.hold, opts.openFails);
+  const timers: { fn: () => unknown; ms: number }[] = [];
   const fetch = vi.fn(opts.fetch ?? (() => ok(release())));
   const checker = new UpdateChecker({
     currentVersion: opts.current ?? '0.2.2',
@@ -60,7 +69,7 @@ async function setup(
     fetch,
     prefsFile,
     ui,
-    now: () => NOW,
+    now: opts.now ?? (() => NOW),
     setTimer: (fn, ms) => {
       timers.push({ fn, ms });
       return {};
@@ -202,6 +211,33 @@ describe('UpdateChecker', () => {
     expect(calls.map((c) => c.method)).toEqual(['showAvailable']);
   });
 
+  it("tells the user when the browser won't open, with the link", async () => {
+    const { checker, calls } = await setup({ choice: 'download', openFails: true });
+    await checker.checkNow(false);
+    expect(calls.map((c) => c.method)).toEqual(['showAvailable', 'openDownload', 'showError']);
+    expect(calls[2]!.args).toEqual([`Couldn't open your browser. You can download Renami 0.3.0 from ${MAC_ARM_URL}`]);
+  });
+
+  it("a manual check answers even when the app can't read its own version", async () => {
+    const { checker, calls } = await setup({ current: 'dev' });
+    await checker.checkNow(true);
+    expect(calls).toEqual([{ method: 'showError', args: ["Renami can't tell which version it is (dev), so it can't compare it with GitHub's."] }]);
+    calls.length = 0;
+    await checker.checkNow(false);
+    expect(calls).toEqual([]);
+  });
+
+  it('a timeout while reading the answer says it took too long', async () => {
+    const body = new ReadableStream({
+      start(controller) {
+        controller.error(new DOMException('The operation timed out.', 'TimeoutError'));
+      },
+    });
+    const { checker, calls } = await setup({ fetch: () => Promise.resolve(new Response(body, { status: 200 })) });
+    await checker.checkNow(true);
+    expect(calls).toEqual([{ method: 'showError', args: ['GitHub took too long to answer. Try again later.'] }]);
+  });
+
   it('two manual checks make one request and one dialog', async () => {
     const { checker, calls, fetch } = await setup({ fetch: () => ok(release('v0.2.2')) });
     await Promise.all([checker.checkNow(true), checker.checkNow(true)]);
@@ -216,22 +252,52 @@ describe('UpdateChecker', () => {
     expect(timers).toEqual([]);
   });
 
-  it('startAuto waits out the 24 h throttle', async () => {
+  it('startAuto waits out the 24 h throttle, looking again every hour', async () => {
     const hourAgo = NOW - 3_600_000;
     const { checker, timers, fetch } = await setup({ prefs: { lastCheckedAt: hourAgo } });
     checker.startAuto(10_000);
     expect(timers.map((t) => t.ms)).toEqual([10_000]);
     await timers[0]!.fn();
     expect(fetch).not.toHaveBeenCalled();
-    expect(timers[1]?.ms).toBe(AUTO_CHECK_INTERVAL_MS - 3_600_000);
+    expect(timers[1]?.ms).toBe(AUTO_CHECK_POLL_MS);
   });
 
-  it('startAuto checks when due, then again a day later', async () => {
+  it('startAuto checks when due, then looks again every hour', async () => {
     const { checker, timers, fetch } = await setup();
     checker.startAuto(10_000);
     await timers[0]!.fn();
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(timers[1]?.ms).toBe(AUTO_CHECK_INTERVAL_MS);
+    expect(timers[1]?.ms).toBe(AUTO_CHECK_POLL_MS);
+    await timers[1]!.fn();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  // A timer only counts time the machine is awake; the hourly look uses the wall clock, so a
+  // laptop that slept through most of a day still checks within an hour of waking.
+  it('checks by the wall clock, however long the machine slept', async () => {
+    let now = NOW;
+    const { checker, timers, fetch } = await setup({ now: () => now });
+    checker.startAuto(10_000);
+    await timers[0]!.fn();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    now += AUTO_CHECK_INTERVAL_MS;
+    await timers[1]!.fn();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('turning the switch off and on during an automatic check leaves one schedule', async () => {
+    let close!: () => void;
+    const hold = new Promise<void>((resolve) => (close = resolve));
+    const { checker, calls, timers } = await setup({ hold });
+    checker.startAuto(10_000);
+    const firstTick = timers[0]!.fn();
+    await vi.waitFor(() => expect(calls.map((c) => c.method)).toEqual(['showAvailable']));
+    await checker.setAutoCheck(false);
+    await checker.setAutoCheck(true);
+    expect(timers).toHaveLength(2);
+    close();
+    await firstTick;
+    expect(timers).toHaveLength(2);
   });
 
   it('turning the automatic check off saves it and cancels a pending check', async () => {

@@ -1,4 +1,4 @@
-import { compareVersions, downloadUrl, isDueForAutoCheck, notesExcerpt, parseRelease, type Release, AUTO_CHECK_INTERVAL_MS } from './updateCheck.js';
+import { compareVersions, downloadUrl, isDueForAutoCheck, notesExcerpt, parseRelease, parseVersion, type Release } from './updateCheck.js';
 import { DEFAULT_UPDATE_PREFS, loadUpdatePrefs, saveUpdatePrefs, type UpdatePrefs } from './updatePrefs.js';
 
 /** A check that failed; its message is what the manual check shows the user. */
@@ -11,7 +11,7 @@ export interface UpdateUi {
   showAvailable(info: { current: string; latest: string; notes: string }): Promise<UpdateChoice>;
   showUpToDate(current: string): Promise<void>;
   showError(message: string): Promise<void>;
-  openDownload(url: string): void;
+  openDownload(url: string): Promise<void>;
 }
 
 export interface UpdateCheckerDeps {
@@ -29,6 +29,14 @@ export interface UpdateCheckerDeps {
 }
 
 const REQUEST_TIMEOUT_MS = 10_000;
+/**
+ * How often the automatic check looks at the wall clock. A timer only counts time the machine is
+ * awake, so one 24 h timer could take days on a laptop that sleeps; looking hourly and letting
+ * isDueForAutoCheck decide keeps the check close to once a day.
+ */
+export const AUTO_CHECK_POLL_MS = 3_600_000;
+const TIMED_OUT = 'GitHub took too long to answer. Try again later.';
+const isTimeout = (error: unknown) => error instanceof Error && error.name === 'TimeoutError';
 
 type Outcome = { release: Release | null } | { error: UpdateError };
 
@@ -111,6 +119,12 @@ export class UpdateChecker {
       return;
     }
     const { release } = outcome;
+    if (!parseVersion(currentVersion)) {
+      const message = `Renami can't tell which version it is (${currentVersion}), so it can't compare it with GitHub's.`;
+      console.warn('update check failed', message);
+      if (manual) await this.dialog(() => ui.showError(message));
+      return;
+    }
     if (!release || compareVersions(release.version, currentVersion) <= 0) {
       if (manual) await this.dialog(() => ui.showUpToDate(currentVersion));
       return;
@@ -120,7 +134,13 @@ export class UpdateChecker {
       ui.showAvailable({ current: currentVersion, latest: release.version, notes: notesExcerpt(release.notes) }),
     );
     if (choice === 'download') {
-      ui.openDownload(downloadUrl(release, this.deps.platform, this.deps.arch, this.deps.isAppImage));
+      const url = downloadUrl(release, this.deps.platform, this.deps.arch, this.deps.isAppImage);
+      try {
+        await ui.openDownload(url);
+      } catch (error) {
+        console.warn('could not open the download', error);
+        await this.dialog(() => ui.showError(`Couldn't open your browser. You can download Renami ${release.version} from ${url}`));
+      }
     } else if (choice === 'skip') {
       this.prefs = { ...this.prefs, skippedVersion: release.version };
       await saveUpdatePrefs(this.deps.prefsFile, this.prefs);
@@ -130,18 +150,18 @@ export class UpdateChecker {
   /** The latest release (null when there is none yet), or what went wrong. Saves the check time on success. */
   private async fetchLatest(): Promise<Outcome> {
     let response: Response;
+    // The timeout covers reading the body too, not just the headers.
+    const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
     try {
       response = await this.deps.fetch(this.deps.feedUrl, {
         headers: { Accept: 'application/vnd.github+json', 'User-Agent': `Renami/${this.deps.currentVersion}` },
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal,
       });
     } catch (error) {
-      const timedOut = error instanceof Error && error.name === 'TimeoutError';
       return {
-        error: new UpdateError(
-          timedOut ? 'GitHub took too long to answer. Try again later.' : "Can't reach GitHub. Check your connection and try again.",
-          { cause: error },
-        ),
+        error: new UpdateError(isTimeout(error) ? TIMED_OUT : "Can't reach GitHub. Check your connection and try again.", {
+          cause: error,
+        }),
       };
     }
     let release: Release | null = null;
@@ -150,7 +170,13 @@ export class UpdateChecker {
     }
     if (response.status !== 404) {
       if (!response.ok) return { error: new UpdateError(`GitHub answered with an error (${response.status}). Try again later.`) };
-      release = parseRelease(await response.json().catch(() => null));
+      let json: unknown = null;
+      try {
+        json = await response.json();
+      } catch (error) {
+        if (isTimeout(error) || signal.aborted) return { error: new UpdateError(TIMED_OUT, { cause: error }) };
+      }
+      release = parseRelease(json);
       if (!release) return { error: new UpdateError("GitHub's answer didn't look like a Renami release.") };
     }
     this.prefs = { ...this.prefs, lastCheckedAt: this.now() };
@@ -165,13 +191,9 @@ export class UpdateChecker {
 
   private async tick(): Promise<void> {
     if (!this.prefs.autoCheck) return;
-    const now = this.now();
-    const last = this.prefs.lastCheckedAt;
-    if (!isDueForAutoCheck(last, now)) {
-      this.schedule(last! + AUTO_CHECK_INTERVAL_MS - now);
-      return;
-    }
-    await this.checkNow(false);
-    this.schedule(AUTO_CHECK_INTERVAL_MS);
+    const generation = this.generation;
+    if (isDueForAutoCheck(this.prefs.lastCheckedAt, this.now())) await this.checkNow(false);
+    // Toggling the switch while this check waited has already scheduled a newer tick.
+    if (generation === this.generation) this.schedule(AUTO_CHECK_POLL_MS);
   }
 }
