@@ -192,7 +192,8 @@ jobs:
             || { echo "::error::npm $version is too old for trusted publishing (needs 11.5.1 or later)"; exit 1; }
           tag=()
           [[ "$GITHUB_REF_NAME" == *-* ]] && tag=(--tag next)
-          npm publish installers/aesonford-renami-*.tgz --provenance --access public --ignore-scripts "${tag[@]}"
+          # ./ so npm reads a file, not a GitHub repo named installers/aesonford-renami-….
+          npm publish ./installers/aesonford-renami-*.tgz --provenance --access public --ignore-scripts "${tag[@]}"
       - name: Make the release public
         env:
           GH_TOKEN: ${{ github.token }}
