@@ -182,6 +182,8 @@ export type PickKind = 'files' | 'folder';
 /** Everything the renderer can ask of the main process: `window.api`. */
 export interface Api {
   platform(): Promise<Platform>;
+  /** The OS, known before the first render; platform() answers the same from main. */
+  platformSync: Platform;
   /** Resolves null when a newer scan replaced this one before it finished. */
   scan(paths: string[], filter: ScanFilter): Promise<FilesSummary | null>;
   buildPlan(req: PlanRequest): Promise<PlanView>;

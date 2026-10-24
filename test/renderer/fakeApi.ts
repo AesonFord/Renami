@@ -37,6 +37,7 @@ export function createFakeApi(overrides: Partial<Api> = {}): FakeApi {
   const emitMetadata = (s: MetadataStatus) => metadataListeners.forEach((cb) => cb(s));
   const api: FakeApi = {
     platform: vi.fn(async () => 'darwin' as const),
+    platformSync: 'darwin',
     scan: vi.fn(async (paths: string[]) => summaryFor(paths)),
     buildPlan: vi.fn(async () => PLAN),
     tokenValues: vi.fn(async () => null),

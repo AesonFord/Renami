@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
+import type { Platform } from '../core/types.js';
 import { EVENTS, INVOKE, type Api, type MetadataStatus, type ProgressView } from '../shared/ipc.js';
 
 function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
@@ -11,6 +12,7 @@ function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
 
 const api: Api = {
   platform: () => ipcRenderer.invoke(INVOKE.platform),
+  platformSync: process.platform as Platform,
   scan: (paths, filter) => ipcRenderer.invoke(INVOKE.scan, paths, filter),
   buildPlan: (req) => ipcRenderer.invoke(INVOKE.buildPlan, req),
   tokenValues: () => ipcRenderer.invoke(INVOKE.tokenValues),
