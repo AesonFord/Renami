@@ -299,6 +299,9 @@ button.chip:hover { border-color: var(--accent); }
 }
 .menu-anchor, .preset-picker { position: relative; display: inline-flex; align-items: center; gap: 8px; }
 .files-strip .count { color: var(--text-5); }
+/* Takes the spare width and ellipsizes, so a status appearing never wraps the strip and moves the page. */
+.strip-status { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap; }
+.strip-status > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* macOS: the strip sits in the title bar beside the traffic lights (hiddenInset in src/main/index.ts). */
 .drag-bar { display: none; }
 :root[data-platform='darwin'] .files-strip { padding-left: 88px; -webkit-app-region: drag; }
