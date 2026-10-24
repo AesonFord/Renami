@@ -356,6 +356,21 @@ test('many find & replace rules scroll inside the tab and leave the preview on s
   await win.getByRole('cell', { name: 'Holiday Snap.txt', exact: true }).first().click();
 });
 
+test("status text in the files strip never wraps it onto another line", async ({ launch, tempDir }) => {
+  const dir = writeFiles(tempDir('renami-e2e-ui-'), ['A long file name for the strip.txt']);
+  const { app, win } = await launch();
+  await addFolder(app, win, dir, 'A long file name for the strip.txt');
+  await minWindow(app);
+  const strip = win.getByRole('region', { name: 'Files' });
+  const before = (await strip.boundingBox())!.height;
+  // Stands in for a slow scan, with a status longer than any line of the strip.
+  await win.evaluate(() => {
+    const { document } = globalThis as unknown as { document: { querySelector(s: string): { textContent: string } | null } };
+    document.querySelector('.strip-status')!.textContent = 'Reading file details 1234 of 5678 '.repeat(20);
+  });
+  expect((await strip.boundingBox())!.height).toBe(before);
+});
+
 test('adding an extension rule scrolls the Case & cleanup tab to the new rule', async ({ launch, tempDir }) => {
   const dir = writeFiles(tempDir('renami-e2e-ui-'), ['Holiday Snap.txt']);
   const { app, win } = await launch();

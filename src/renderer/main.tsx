@@ -8,6 +8,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Api } from '../shared/ipc.js';
 import { App } from './App.js';
+import { markPlatform } from './lib/platform.js';
 
 declare global {
   interface Window {
@@ -17,6 +18,7 @@ declare global {
 
 const root = document.getElementById('root');
 if (!root) throw new Error('index.html has no #root element');
+markPlatform(document.documentElement, window.api.platformSync);
 createRoot(root).render(
   <StrictMode>
     <App api={window.api} />

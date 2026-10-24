@@ -12,6 +12,10 @@ test('opens the window with a sandboxed renderer and a working bridge', async ({
   expect(await win.evaluate(() => (globalThis as unknown as { api: { platform(): Promise<string> } }).api.platform())).toBe(
     process.platform,
   );
+  // Set before the first render, so platform-only CSS never flashes.
+  expect(await win.evaluate(() => (globalThis as unknown as { document: { documentElement: { dataset: Record<string, string> } } }).document.documentElement.dataset.platform)).toBe(
+    process.platform,
+  );
 });
 
 test('removes its temp user data folder when launch fails before a window opens', async () => {

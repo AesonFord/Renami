@@ -47,6 +47,12 @@
   --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
 }
 
+/* macOS: the system font, so controls match the OS. Other platforms keep IBM Plex. */
+:root[data-platform='darwin'] {
+  --font-sans: -apple-system, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
 /* Warm near-black to match the warm off-white. Accent and status colors are lighter so they read on it. */
 @media (prefers-color-scheme: dark) {
   :root {
@@ -293,6 +299,19 @@ button.chip:hover { border-color: var(--accent); }
 }
 .menu-anchor, .preset-picker { position: relative; display: inline-flex; align-items: center; gap: 8px; }
 .files-strip .count { color: var(--text-5); }
+/* Takes the spare width and ellipsizes, so a status appearing never wraps the strip and moves the page. */
+.strip-status { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap; }
+.strip-status > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* macOS: the strip sits in the title bar beside the traffic lights (hiddenInset in src/main/index.ts). */
+.drag-bar { display: none; }
+:root[data-platform='darwin'] .files-strip { padding-left: 88px; -webkit-app-region: drag; }
+/* Controls take clicks, and anything with a tooltip takes hover. A dialog's backdrop sits over the strip, so it opts out too. */
+:root[data-platform='darwin'] .files-strip :is(button, input, select, label, [title], .chip, .popover, .preset-picker),
+:root[data-platform='darwin'] .overlay { -webkit-app-region: no-drag; }
+:root[data-platform='darwin'] .drag-bar { display: block; flex: none; height: 50px; -webkit-app-region: drag; }
+:root[data-platform='darwin'] .drag-bar + .empty { margin-top: 0; }
+:root[data-platform='darwin'][data-fullscreen='true'] .files-strip { padding-left: 24px; }
+:root[data-platform='darwin'][data-fullscreen='true'] .drag-bar { display: none; }
 
 /* Pattern bar */
 .pattern-bar {

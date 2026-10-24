@@ -33,6 +33,7 @@ export const INVOKE = {
   fileDetails: 'preview:file-details',
   showInFolder: 'preview:show-in-folder',
   openFile: 'preview:open-file',
+  isFullScreen: 'window:is-full-screen',
 } as const;
 
 /** Event channels: main → renderer via webContents.send. */
@@ -40,7 +41,12 @@ export const EVENTS = {
   metadataProgress: 'metadata:progress',
   executeProgress: 'batch:progress',
   openPaths: 'app:open-paths',
+  fullScreen: 'window:full-screen',
+  menuCommand: 'menu:command',
 } as const;
+
+/** File menu commands, sent to the page to run like the buttons that do the same. */
+export type MenuCommand = 'addFiles' | 'addFolder' | 'importNames' | 'exportPreview' | 'exportLast' | 'rename' | 'undo';
 
 export type ScanFilter = ScanOptions;
 
@@ -182,6 +188,8 @@ export type PickKind = 'files' | 'folder';
 /** Everything the renderer can ask of the main process: `window.api`. */
 export interface Api {
   platform(): Promise<Platform>;
+  /** The OS, known before the first render; platform() answers the same from main. */
+  platformSync: Platform;
   /** Resolves null when a newer scan replaced this one before it finished. */
   scan(paths: string[], filter: ScanFilter): Promise<FilesSummary | null>;
   buildPlan(req: PlanRequest): Promise<PlanView>;
@@ -221,4 +229,9 @@ export interface Api {
   onExecuteProgress(cb: (progress: ProgressView) => void): () => void;
   /** Paths the OS hands the app after start-up (dock drop, "Open with", a second launch). */
   onOpenPaths(cb: (paths: string[]) => void): () => void;
+  isFullScreen(): Promise<boolean>;
+  /** The window entered (true) or left (false) full screen. */
+  onFullScreen(cb: (on: boolean) => void): () => void;
+  /** A File menu command to run (src/main/menu.ts). */
+  onMenuCommand(cb: (command: MenuCommand) => void): () => void;
 }
