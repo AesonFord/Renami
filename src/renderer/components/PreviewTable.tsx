@@ -347,7 +347,7 @@ export function PreviewTable({
                     if (reorderable && e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
                       e.preventDefault();
                       onReorder?.(moveStep(allPaths(), visiblePaths(), r.path, e.key === 'ArrowUp' ? -1 : 1));
-                    } else if (canEdit && e.key === 'Enter') {
+                    } else if (canEdit && e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
                       e.preventDefault();
                       startEditing(r);
                     } else if (selectable && !e.altKey && isSelectionKey(e.key)) {

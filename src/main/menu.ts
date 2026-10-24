@@ -20,7 +20,8 @@ export interface MenuCommands {
 
 /**
  * The app's commands, with each item's id set to its command. Undo Last Rename is Alt+Cmd+Z
- * because Shift+Cmd+Z is Edit › Redo in text fields.
+ * because Shift+Cmd+Z is Edit › Redo in text fields; elsewhere it has none, because Windows
+ * reports AltGr as Ctrl+Alt and AltGr+Z types a letter on some layouts.
  */
 function fileMenu(platform: NodeJS.Platform, commands: MenuCommands): MenuItemConstructorOptions {
   const item = (id: MenuCommand, label: string, accelerator?: string): MenuItemConstructorOptions => ({
@@ -40,7 +41,7 @@ function fileMenu(platform: NodeJS.Platform, commands: MenuCommands): MenuItemCo
       item('exportLast', 'Export Last Rename…'),
       { type: 'separator' },
       item('rename', 'Rename Files', 'CmdOrCtrl+Return'),
-      item('undo', 'Undo Last Rename', 'Alt+CmdOrCtrl+Z'),
+      item('undo', 'Undo Last Rename', platform === 'darwin' ? 'Alt+CmdOrCtrl+Z' : undefined),
       { type: 'separator' },
       platform === 'darwin' ? { role: 'close' } : { role: 'quit' },
     ],

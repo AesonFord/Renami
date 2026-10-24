@@ -277,6 +277,7 @@ function registerIpc(s: Session): void {
   handle(INVOKE.takeOpenPaths, () => openPaths.take());
   handle(INVOKE.fileDetails, (p: unknown) => (typeof p === 'string' ? s.fileDetails(p) : null));
   handle(INVOKE.showInFolder, (p: unknown) => shell.showItemInFolder(batchFile(s, p)));
+  handle(INVOKE.isFullScreen, () => liveWindow()?.isFullScreen() ?? false);
   handle(INVOKE.openFile, async (p: unknown) => {
     const error = await shell.openPath(batchFile(s, p));
     return error === '' ? null : error;

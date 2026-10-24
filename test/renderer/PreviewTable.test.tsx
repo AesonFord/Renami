@@ -463,6 +463,13 @@ describe('editing and reordering', () => {
     expect(onEditName).toHaveBeenCalledWith('/p/b', 'Trip_002x');
   });
 
+  it('leaves Cmd+Enter and Ctrl+Enter on a row to the File menu', () => {
+    render(<PreviewTable excluded={NONE} onToggle={() => {}} rows={three()} onlyNeedsLook={false} onOnlyNeedsLook={() => {}} onEditName={vi.fn()} />);
+    fireEvent.keyDown(bodyRows()[0]!, { key: 'Enter', metaKey: true });
+    fireEvent.keyDown(bodyRows()[0]!, { key: 'Enter', ctrlKey: true });
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
   it('opens the editor with Enter on a focused row', async () => {
     render(<PreviewTable excluded={NONE} onToggle={() => {}} rows={three()} onlyNeedsLook={false} onOnlyNeedsLook={() => {}} onEditName={vi.fn()} />);
     bodyRows()[2]!.focus();

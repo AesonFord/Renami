@@ -70,6 +70,7 @@ export function createFakeApi(overrides: Partial<Api> = {}): FakeApi {
     fileDetails: vi.fn(async () => ({ size: 2_400_000, width: 4032, height: 3024, durationSeconds: null })),
     showInFolder: vi.fn(async () => {}),
     openFile: vi.fn(async () => null),
+    isFullScreen: vi.fn(async () => false),
     pathForFile: vi.fn((file: File) => `/dropped/${file.name}`),
     onMetadataProgress: vi.fn((cb: (s: MetadataStatus) => void) => {
       metadataListeners.add(cb);

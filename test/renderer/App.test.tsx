@@ -314,6 +314,28 @@ describe('App', () => {
     expect(api.pickPaths).toHaveBeenCalledTimes(1);
   });
 
+  it('ignores Rename from the menu while a new name is being typed', async () => {
+    const api = await withFiles();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Rename 2 files' })).toBeEnabled());
+    fireEvent.doubleClick(within(screen.getAllByRole('row')[1]!).getAllByRole('cell')[1]!);
+    expect(screen.getByRole('textbox', { name: 'New name for a.jpg' })).toHaveFocus();
+    act(() => api.emitMenuCommand('rename'));
+    expect(api.execute).not.toHaveBeenCalled();
+  });
+
+  it('ignores menu commands while the All tokens dialog is open', async () => {
+    const api = await withFiles();
+    await userEvent.click(screen.getByRole('button', { name: 'All tokens…' }));
+    await screen.findByRole('dialog');
+    act(() => api.emitMenuCommand('addFolder'));
+    expect(api.pickPaths).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks whether the window is already full screen, so a reloaded page keeps the right layout', async () => {
+    render(<App api={createFakeApi({ isFullScreen: vi.fn(async () => true) })} />);
+    await waitFor(() => expect(document.documentElement.dataset.fullscreen).toBe('true'));
+  });
+
   it('opens the failure dialog and copies the report', async () => {
     const api = await withFiles(
       createFakeApi({

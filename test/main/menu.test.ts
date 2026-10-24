@@ -127,6 +127,12 @@ describe('menuTemplate file menu', () => {
     for (const item of fileMenu('darwin').submenu as MenuItemConstructorOptions[]) if (item.accelerator) expect(edit).not.toContain(item.accelerator);
   });
 
+  it('gives Undo Last Rename no shortcut off macOS, where AltGr is Ctrl+Alt', () => {
+    for (const platform of ['win32', 'linux'] as const) {
+      expect(findId(menuTemplate(platform, false, undefined, commands()), 'undo')!.accelerator).toBeUndefined();
+    }
+  });
+
   it('keeps the fileMenu role without commands', () => {
     expect(menuTemplate('darwin', false).some((m) => m.role === 'fileMenu')).toBe(true);
   });

@@ -302,7 +302,9 @@ button.chip:hover { border-color: var(--accent); }
 /* macOS: the strip sits in the title bar beside the traffic lights (hiddenInset in src/main/index.ts). */
 .drag-bar { display: none; }
 :root[data-platform='darwin'] .files-strip { padding-left: 88px; -webkit-app-region: drag; }
-:root[data-platform='darwin'] .files-strip :is(button, input, select, label, .chip, .popover, .preset-picker) { -webkit-app-region: no-drag; }
+/* Controls take clicks, and anything with a tooltip takes hover. A dialog's backdrop sits over the strip, so it opts out too. */
+:root[data-platform='darwin'] .files-strip :is(button, input, select, label, [title], .chip, .popover, .preset-picker),
+:root[data-platform='darwin'] .overlay { -webkit-app-region: no-drag; }
 :root[data-platform='darwin'] .drag-bar { display: block; flex: none; height: 50px; -webkit-app-region: drag; }
 :root[data-platform='darwin'] .drag-bar + .empty { margin-top: 0; }
 :root[data-platform='darwin'][data-fullscreen='true'] .files-strip { padding-left: 24px; }

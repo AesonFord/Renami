@@ -33,6 +33,7 @@ export const INVOKE = {
   fileDetails: 'preview:file-details',
   showInFolder: 'preview:show-in-folder',
   openFile: 'preview:open-file',
+  isFullScreen: 'window:is-full-screen',
 } as const;
 
 /** Event channels: main → renderer via webContents.send. */
@@ -228,6 +229,7 @@ export interface Api {
   onExecuteProgress(cb: (progress: ProgressView) => void): () => void;
   /** Paths the OS hands the app after start-up (dock drop, "Open with", a second launch). */
   onOpenPaths(cb: (paths: string[]) => void): () => void;
+  isFullScreen(): Promise<boolean>;
   /** The window entered (true) or left (false) full screen. */
   onFullScreen(cb: (on: boolean) => void): () => void;
   /** A File menu command to run (src/main/menu.ts). */

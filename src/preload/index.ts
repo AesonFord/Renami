@@ -33,6 +33,7 @@ const api: Api = {
   fileDetails: (path) => ipcRenderer.invoke(INVOKE.fileDetails, path),
   showInFolder: (path) => ipcRenderer.invoke(INVOKE.showInFolder, path),
   openFile: (path) => ipcRenderer.invoke(INVOKE.openFile, path),
+  isFullScreen: () => ipcRenderer.invoke(INVOKE.isFullScreen),
   // Electron removed File.path; this is the supported way to get a dropped file's real path.
   pathForFile: (file) => webUtils.getPathForFile(file),
   onMetadataProgress: (cb) => subscribe<MetadataStatus>(EVENTS.metadataProgress, cb),

@@ -127,6 +127,14 @@ describe('token popover', () => {
     expect(screen.getByRole('dialog', { name: 'Edit {date_taken}' })).toBeInTheDocument();
   });
 
+  it('leaves Cmd+Enter and Ctrl+Enter to the File menu', () => {
+    render(<Harness initial="Trip_{date_taken}" />);
+    act(() => input().setSelectionRange(8, 8));
+    fireEvent.keyDown(input(), { key: 'Enter', metaKey: true });
+    fireEvent.keyDown(input(), { key: 'Enter', ctrlKey: true });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('ignores Enter when the caret is outside every token', () => {
     render(<Harness initial="Trip_{seq}" />);
     enterAt(2);

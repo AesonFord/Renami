@@ -70,27 +70,30 @@ export function App({ api }: { api: Api }) {
     if (!exiftoolFailed) setBannerDismissed(false);
   }, [exiftoolFailed]);
 
-  // CSS drops the traffic-light room in full screen (styles.css, files strip).
-  useEffect(
-    () =>
-      api.onFullScreen((on) => {
-        if (on) document.documentElement.dataset.fullscreen = 'true';
-        else delete document.documentElement.dataset.fullscreen;
-      }),
-    [api],
-  );
+  // CSS drops the traffic-light room in full screen (styles.css, files strip). Asked once too, for
+  // a page reloaded while the window was already full screen.
+  useEffect(() => {
+    const mark = (on: boolean): void => {
+      if (on) document.documentElement.dataset.fullscreen = 'true';
+      else delete document.documentElement.dataset.fullscreen;
+    };
+    void api.isFullScreen().then(mark).catch(() => {});
+    return api.onFullScreen(mark);
+  }, [api]);
 
   // File menu commands run like the buttons, and only when the button would work. Reassigned every
   // render so the guards read current state; the subscription below stays put.
   const runMenuCommand = useRef<(command: MenuCommand) => void>(() => {});
   runMenuCommand.current = (command) => {
-    if (state.busy !== null || dialogOutcome) return;
+    // Any modal (outcome, All tokens) blocks them, as it blocks the buttons behind it.
+    if (state.busy !== null || document.querySelector('[aria-modal="true"]')) return;
     if (command === 'addFiles') void actions.pick('files');
     else if (command === 'addFolder') void actions.pick('folder');
     else if (command === 'importNames' && state.sources.length > 0) void actions.importNames();
     else if (command === 'exportPreview' && rows.length > 0) void actions.exportPreview();
     else if (command === 'exportLast' && state.lastChanges.length > 0) void actions.exportLastBatch();
-    else if (command === 'rename' && blockedReason === null) void actions.rename();
+    // Not mid-typing a new name: the draft only reaches the plan on Enter or blur.
+    else if (command === 'rename' && blockedReason === null && !document.activeElement?.matches('.name-edit')) void actions.rename();
     else if (command === 'undo' && state.canUndo) void actions.undo();
   };
   useEffect(() => api.onMenuCommand((command) => runMenuCommand.current(command)), [api]);
