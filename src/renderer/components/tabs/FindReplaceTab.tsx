@@ -1,11 +1,11 @@
 import type { FindReplaceRule, RuleScope } from '../../../core/types.js';
 import { XIcon } from '../icons.js';
 import type { TabProps } from './types.js';
-import { useNewRuleFocus } from './useNewRuleFocus.js';
+import { useRevealNewRule } from './useRevealNewRule.js';
 
 export function FindReplaceTab({ settings, onChange }: TabProps) {
   const rules = settings.findReplace;
-  const newRule = useNewRuleFocus(rules.length);
+  const newRule = useRevealNewRule(rules.length);
   const setRules = (next: FindReplaceRule[]): void => onChange((s) => ({ ...s, findReplace: next }));
   const patch = (i: number, p: Partial<FindReplaceRule>): void =>
     setRules(rules.map((r, j) => (j === i ? { ...r, ...p } : r)));
@@ -24,7 +24,9 @@ export function FindReplaceTab({ settings, onChange }: TabProps) {
             <input
               ref={i === rules.length - 1 ? newRule.input : undefined}
               className="field mono"
-              value={r.find} onChange={(e) => patch(i, { find: e.target.value })} />
+              value={r.find}
+              onChange={(e) => patch(i, { find: e.target.value })}
+            />
           </label>
           <label className="inline">
             Replace with
@@ -59,10 +61,7 @@ export function FindReplaceTab({ settings, onChange }: TabProps) {
         <button
           type="button"
           className="btn btn-small"
-          onClick={() => {
-            newRule.markAdded();
-            setRules([...rules, { find: '', replace: '', regex: false, matchCase: false }]);
-          }}
+          onClick={() => newRule.add(() => setRules([...rules, { find: '', replace: '', regex: false, matchCase: false }]))}
         >
           + Add rule
         </button>

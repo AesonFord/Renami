@@ -1,14 +1,14 @@
 import type { CaseMode, ExtensionRule, RenameSettings } from '../../../core/types.js';
 import { XIcon } from '../icons.js';
 import type { TabProps } from './types.js';
-import { useNewRuleFocus } from './useNewRuleFocus.js';
+import { useRevealNewRule } from './useRevealNewRule.js';
 
 export function CleanupTab({ settings, onChange }: TabProps) {
   const c = settings.cleanup;
   const set = (patch: Partial<RenameSettings['cleanup']>): void =>
     onChange((s) => ({ ...s, cleanup: { ...s.cleanup, ...patch } }));
   const rules = c.extensionRules;
-  const newRule = useNewRuleFocus(rules.length);
+  const newRule = useRevealNewRule(rules.length);
   const patchRule = (i: number, p: Partial<ExtensionRule>): void =>
     set({ extensionRules: rules.map((r, j) => (j === i ? { ...r, ...p } : r)) });
   return (
@@ -81,10 +81,7 @@ export function CleanupTab({ settings, onChange }: TabProps) {
           <button
             type="button"
             className="btn btn-small"
-            onClick={() => {
-              newRule.markAdded();
-              set({ extensionRules: [...rules, { from: '', to: '' }] });
-            }}
+            onClick={() => newRule.add(() => set({ extensionRules: [...rules, { from: '', to: '' }] }))}
           >
             + Add extension rule
           </button>

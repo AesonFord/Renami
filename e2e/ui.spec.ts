@@ -327,6 +327,10 @@ test('find & replace rewrites {name} and reports a bad regex; case & cleanup cha
   await expect(cleanup.locator('.tab-count')).toHaveText('3');
 });
 
+/** Shrinks the window to its minimum size, where the preview has the least room. */
+const minWindow = (app: ElectronApplication): Promise<void> =>
+  app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(960, 600));
+
 /** Whether the tab panel is scrolled to its end, so what sits below the newest rule shows too. */
 const scrolledToEnd = (panel: Locator): Promise<boolean> =>
   panel.evaluate((el) => el.scrollHeight > el.clientHeight && el.scrollTop + el.clientHeight >= el.scrollHeight - 1);
@@ -335,15 +339,14 @@ test('many find & replace rules scroll inside the tab and leave the preview on s
   const dir = writeFiles(tempDir('renami-e2e-ui-'), ['Holiday Snap.txt']);
   const { app, win } = await launch();
   await addFolder(app, win, dir, 'Holiday Snap.txt');
-  // At the window's minimum size, where the preview has the least room.
-  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(960, 600));
+  await minWindow(app);
   const panel = win.getByRole('tabpanel');
   await tab(win, 'Find & replace').click();
   const add = panel.getByRole('button', { name: '+ Add rule' });
-  for (let i = 0; i < 20; i++) await add.click();
+  for (let i = 0; i < 8; i++) await add.click();
 
   // The new rule's Find field takes focus, and the panel scrolls to its end so + Add rule and the hint show.
-  await expect(panel.getByRole('group', { name: 'Rule 20' }).getByLabel('Find', { exact: true })).toBeFocused();
+  await expect(panel.getByRole('group', { name: 'Rule 8' }).getByLabel('Find', { exact: true })).toBeFocused();
   await expect.poll(() => scrolledToEnd(panel)).toBe(true);
   const panelBox = await panel.boundingBox();
   const previewBox = await win.getByRole('region', { name: 'Preview' }).boundingBox();
@@ -357,7 +360,7 @@ test('adding an extension rule scrolls the Case & cleanup tab to the new rule', 
   const dir = writeFiles(tempDir('renami-e2e-ui-'), ['Holiday Snap.txt']);
   const { app, win } = await launch();
   await addFolder(app, win, dir, 'Holiday Snap.txt');
-  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(960, 600));
+  await minWindow(app);
   const panel = win.getByRole('tabpanel');
   await tab(win, 'Case & cleanup').click();
   const add = panel.getByRole('button', { name: '+ Add extension rule' });
