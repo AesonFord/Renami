@@ -356,8 +356,9 @@ button.chip:hover { border-color: var(--accent); }
 .token-row:hover, .token-row:focus-visible { background: var(--accent-soft); }
 
 /* Option tabs */
-.options { flex: none; background: var(--surface-2); border-bottom: 1px solid var(--line); }
-.tabs { display: flex; gap: 24px; padding: 0 24px; border-bottom: 1px solid var(--line-soft); }
+/* The panel scrolls past max(25vh, 180px), and shrinks further only once the preview (flex-basis 0) is down to its minimum, so long rule lists never push the file list off screen. */
+.options { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.tabs { flex: none; display: flex; gap: 24px; padding: 0 24px; border-bottom: 1px solid var(--line-soft); }
 .tab {
   height: 40px;
   display: flex;
@@ -372,7 +373,7 @@ button.chip:hover { border-color: var(--accent); }
 }
 .tab[aria-selected='true'] { color: var(--text); font-weight: 500; border-bottom-color: var(--accent); }
 .tab-count { font-size: 11px; color: var(--accent-strong); background: var(--accent-soft); border-radius: 8px; padding: 0 6px; }
-.tab-panel { min-height: 52px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; padding: 10px 24px; }
+.tab-panel { min-height: 52px; max-height: max(25vh, 180px); overflow-y: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; padding: 10px 24px; }
 .rules { display: flex; flex-direction: column; gap: 8px; width: 100%; }
 .rule { display: flex; align-items: center; gap: 10px; }
 .dest { max-width: 360px; }
@@ -438,7 +439,7 @@ button.chip:hover { border-color: var(--accent); }
 .preview-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* File preview panel. */
-.preview-split { flex: 1 1 auto; min-height: 0; display: flex; }
+.preview-split { flex: 1 1 0; min-height: 160px; display: flex; }
 .preview-split > .preview { min-width: 0; }
 .preview-row.row-selected { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .file-panel {

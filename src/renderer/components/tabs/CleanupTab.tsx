@@ -1,12 +1,14 @@
 import type { CaseMode, ExtensionRule, RenameSettings } from '../../../core/types.js';
 import { XIcon } from '../icons.js';
 import type { TabProps } from './types.js';
+import { useNewRuleFocus } from './useNewRuleFocus.js';
 
 export function CleanupTab({ settings, onChange }: TabProps) {
   const c = settings.cleanup;
   const set = (patch: Partial<RenameSettings['cleanup']>): void =>
     onChange((s) => ({ ...s, cleanup: { ...s.cleanup, ...patch } }));
   const rules = c.extensionRules;
+  const newRule = useNewRuleFocus(rules.length);
   const patchRule = (i: number, p: Partial<ExtensionRule>): void =>
     set({ extensionRules: rules.map((r, j) => (j === i ? { ...r, ...p } : r)) });
   return (
@@ -47,6 +49,7 @@ export function CleanupTab({ settings, onChange }: TabProps) {
             <label className="inline">
               Change .
               <input
+                ref={i === rules.length - 1 ? newRule.input : undefined}
                 className="field mono"
                 style={{ width: 72 }}
                 aria-label={`Extension rule ${i + 1} from`}
@@ -75,7 +78,14 @@ export function CleanupTab({ settings, onChange }: TabProps) {
           </div>
         ))}
         <div>
-          <button type="button" className="btn btn-small" onClick={() => set({ extensionRules: [...rules, { from: '', to: '' }] })}>
+          <button
+            type="button"
+            className="btn btn-small"
+            onClick={() => {
+              newRule.markAdded();
+              set({ extensionRules: [...rules, { from: '', to: '' }] });
+            }}
+          >
             + Add extension rule
           </button>
           <span className="hint"> Leave "to" empty to drop the extension. Extensions no rule names keep theirs.</span>
