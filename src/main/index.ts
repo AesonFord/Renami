@@ -40,7 +40,7 @@ import {
 import { Session } from './session.js';
 import { devRendererUrl, devUpdateFeed } from './devMode.js';
 import { APP_ORIGIN, APP_SCHEME, assetMime, resolveAppPath } from './appServer.js';
-import { menuTemplate } from './menu.js';
+import { aboutPanelOptions, menuTemplate } from './menu.js';
 import { appendLog, appendLogSync, crashLoopMessage, reloadLimiter } from './crash.js';
 import { progressFraction } from './progress.js';
 import { FEED_URL } from './updateCheck.js';
@@ -436,6 +436,7 @@ void app.whenReady().then(async () => {
         ),
       ),
     );
+  app.setAboutPanelOptions(aboutPanelOptions(app.getVersion()));
   buildMenu();
   // Deny every Chromium permission (camera, mic, geolocation, notifications) except fullscreen:
   // that one is requestFullscreen(), which the preview panel's <video controls> button calls.

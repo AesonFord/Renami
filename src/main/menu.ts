@@ -1,4 +1,4 @@
-import type { MenuItemConstructorOptions } from 'electron';
+import type { AboutPanelOptionsOptions, MenuItemConstructorOptions } from 'electron';
 import type { MenuCommand } from '../shared/ipc.js';
 
 /** The update check's two menu items (src/main/updater.ts). */
@@ -6,6 +6,11 @@ export interface UpdateMenu {
   autoCheck: boolean;
   checkNow: () => void;
   setAutoCheck: (on: boolean) => void;
+}
+
+/** What Renami › About Renami shows (macOS and Linux; Windows has no About panel). */
+export function aboutPanelOptions(version: string): AboutPanelOptionsOptions {
+  return { applicationName: 'Renami', applicationVersion: version, website: 'https://github.com/AesonFord/Renami' };
 }
 
 /** Runs a File menu command in the page (src/main/index.ts sends it over EVENTS.menuCommand). */

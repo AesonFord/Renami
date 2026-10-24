@@ -1,6 +1,6 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
-import { menuTemplate } from '../../src/main/menu.js';
+import { aboutPanelOptions, menuTemplate } from '../../src/main/menu.js';
 
 /** Every role in the template, top-level and one submenu deep. */
 function roles(items: MenuItemConstructorOptions[]): string[] {
@@ -129,5 +129,11 @@ describe('menuTemplate file menu', () => {
 
   it('keeps the fileMenu role without commands', () => {
     expect(menuTemplate('darwin', false).some((m) => m.role === 'fileMenu')).toBe(true);
+  });
+});
+
+describe('aboutPanelOptions', () => {
+  it('names the app, its version and the project page', () => {
+    expect(aboutPanelOptions('0.3.2')).toEqual({ applicationName: 'Renami', applicationVersion: '0.3.2', website: 'https://github.com/AesonFord/Renami' });
   });
 });
