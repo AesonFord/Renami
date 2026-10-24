@@ -40,6 +40,10 @@ test('puts the files strip in the title bar, and makes room for the traffic ligh
   await win.getByRole('button', { name: 'Choose folder…' }).click();
   await expect(win.getByRole('cell', { name: 'a.txt', exact: true }).first()).toBeVisible();
 
+  // The system font, so text matches the OS.
+  expect(await style(win, 'body', 'fontFamily')).toMatch(/^-apple-system/);
+  expect(await style(win, '.pattern-input', 'fontFamily')).toMatch(/^ui-monospace/);
+
   expect(await style(win, '.files-strip', 'paddingLeft')).toBe('88px');
   expect(await style(win, '.files-strip', 'webkitAppRegion')).toBe('drag');
   for (const selector of ['.chip-add', '.files-strip input[type="checkbox"]', '.preset-picker select']) {

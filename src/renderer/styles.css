@@ -47,6 +47,12 @@
   --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
 }
 
+/* macOS: the system font, so controls match the OS. Other platforms keep IBM Plex. */
+:root[data-platform='darwin'] {
+  --font-sans: -apple-system, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
 /* Warm near-black to match the warm off-white. Accent and status colors are lighter so they read on it. */
 @media (prefers-color-scheme: dark) {
   :root {
