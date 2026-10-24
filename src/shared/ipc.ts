@@ -40,6 +40,7 @@ export const EVENTS = {
   metadataProgress: 'metadata:progress',
   executeProgress: 'batch:progress',
   openPaths: 'app:open-paths',
+  fullScreen: 'window:full-screen',
 } as const;
 
 export type ScanFilter = ScanOptions;
@@ -223,4 +224,6 @@ export interface Api {
   onExecuteProgress(cb: (progress: ProgressView) => void): () => void;
   /** Paths the OS hands the app after start-up (dock drop, "Open with", a second launch). */
   onOpenPaths(cb: (paths: string[]) => void): () => void;
+  /** The window entered (true) or left (false) full screen. */
+  onFullScreen(cb: (on: boolean) => void): () => void;
 }

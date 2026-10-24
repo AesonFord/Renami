@@ -333,6 +333,8 @@ function createWindow(devUrl: string | null): BrowserWindow {
     minWidth: 960,
     minHeight: 600,
     title: 'Renami',
+    // macOS: the files strip sits in the title bar beside the traffic lights (styles.css).
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 20, y: 19 } } : {}),
     backgroundColor: windowBackground(),
     webPreferences: {
       preload: path.join(import.meta.dirname, '../preload/index.cjs'),
@@ -343,6 +345,9 @@ function createWindow(devUrl: string | null): BrowserWindow {
       spellcheck: false,
     },
   });
+  // macOS hides the traffic lights in full screen; the page drops the room it keeps for them.
+  win.on('enter-full-screen', () => send(EVENTS.fullScreen, true));
+  win.on('leave-full-screen', () => send(EVENTS.fullScreen, false));
   // The app never opens other pages.
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (event) => event.preventDefault());

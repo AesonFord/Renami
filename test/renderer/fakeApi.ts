@@ -7,6 +7,7 @@ export type FakeApi = Api & {
   emitMetadata(status: MetadataStatus): void;
   emitProgress(progress: ProgressView): void;
   emitOpenPaths(paths: string[]): void;
+  emitFullScreen(on: boolean): void;
 };
 
 export function summaryFor(paths: string[]): FilesSummary {
@@ -34,6 +35,7 @@ export function createFakeApi(overrides: Partial<Api> = {}): FakeApi {
   const metadataListeners = new Set<(s: MetadataStatus) => void>();
   const progressListeners = new Set<(p: ProgressView) => void>();
   const openListeners = new Set<(p: string[]) => void>();
+  const fullScreenListeners = new Set<(on: boolean) => void>();
   const emitMetadata = (s: MetadataStatus) => metadataListeners.forEach((cb) => cb(s));
   const api: FakeApi = {
     platform: vi.fn(async () => 'darwin' as const),
@@ -85,9 +87,16 @@ export function createFakeApi(overrides: Partial<Api> = {}): FakeApi {
         openListeners.delete(cb);
       };
     }),
+    onFullScreen: vi.fn((cb: (on: boolean) => void) => {
+      fullScreenListeners.add(cb);
+      return () => {
+        fullScreenListeners.delete(cb);
+      };
+    }),
     emitMetadata,
     emitProgress: (p) => progressListeners.forEach((cb) => cb(p)),
     emitOpenPaths: (p) => openListeners.forEach((cb) => cb(p)),
+    emitFullScreen: (on) => fullScreenListeners.forEach((cb) => cb(on)),
     ...overrides,
   };
   return api;

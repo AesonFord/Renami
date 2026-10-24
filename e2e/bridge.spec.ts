@@ -8,8 +8,8 @@ import { scanAndPlan } from './helpers.js';
 
 const API_METHODS = [
   'buildPlan', 'canUndo', 'cancel', 'clear', 'copyText', 'deletePreset', 'execute', 'fileDetails', 'listPresets',
-  'onExecuteProgress', 'onMetadataProgress', 'onOpenPaths', 'openFile', 'pathForFile', 'pickFolder', 'pickPaths',
-  'platform', 'readText', 'savePreset', 'saveText', 'scan', 'showInFolder', 'takeOpenPaths', 'tokenValues', 'undo',
+  'onExecuteProgress', 'onFullScreen', 'onMetadataProgress', 'onOpenPaths', 'openFile', 'pathForFile', 'pickFolder', 'pickPaths',
+  'platform', 'platformSync', 'readText', 'savePreset', 'saveText', 'scan', 'showInFolder', 'takeOpenPaths', 'tokenValues', 'undo',
 ];
 
 /** Copies the test photo and a text file into dir, and returns dir. */

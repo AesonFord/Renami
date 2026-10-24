@@ -293,6 +293,14 @@ button.chip:hover { border-color: var(--accent); }
 }
 .menu-anchor, .preset-picker { position: relative; display: inline-flex; align-items: center; gap: 8px; }
 .files-strip .count { color: var(--text-5); }
+/* macOS: the strip sits in the title bar beside the traffic lights (hiddenInset in src/main/index.ts). */
+.drag-bar { display: none; }
+:root[data-platform='darwin'] .files-strip { padding-left: 88px; -webkit-app-region: drag; }
+:root[data-platform='darwin'] .files-strip :is(button, input, select, label, .chip, .popover, .preset-picker) { -webkit-app-region: no-drag; }
+:root[data-platform='darwin'] .drag-bar { display: block; flex: none; height: 50px; -webkit-app-region: drag; }
+:root[data-platform='darwin'] .drag-bar + .empty { margin-top: 0; }
+:root[data-platform='darwin'][data-fullscreen='true'] .files-strip { padding-left: 24px; }
+:root[data-platform='darwin'][data-fullscreen='true'] .drag-bar { display: none; }
 
 /* Pattern bar */
 .pattern-bar {

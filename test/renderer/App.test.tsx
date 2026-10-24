@@ -32,6 +32,15 @@ async function clickRename() {
 }
 
 describe('App', () => {
+  it('marks the page while the window is full screen', () => {
+    const api = createFakeApi();
+    render(<App api={api} />);
+    act(() => api.emitFullScreen(true));
+    expect(document.documentElement.dataset.fullscreen).toBe('true');
+    act(() => api.emitFullScreen(false));
+    expect(document.documentElement.dataset.fullscreen).toBeUndefined();
+  });
+
   it('starts as one big drop zone', () => {
     render(<App api={createFakeApi()} />);
     expect(screen.getByRole('heading', { name: 'Drop files or folders here' })).toBeInTheDocument();

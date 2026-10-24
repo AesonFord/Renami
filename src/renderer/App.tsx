@@ -70,6 +70,16 @@ export function App({ api }: { api: Api }) {
     if (!exiftoolFailed) setBannerDismissed(false);
   }, [exiftoolFailed]);
 
+  // CSS drops the traffic-light room in full screen (styles.css, files strip).
+  useEffect(
+    () =>
+      api.onFullScreen((on) => {
+        if (on) document.documentElement.dataset.fullscreen = 'true';
+        else delete document.documentElement.dataset.fullscreen;
+      }),
+    [api],
+  );
+
   const { updateSettings, addPaths, pathForFile, include, exclude } = actions;
   const toggleFiles = useCallback(
     (paths: string[], back: boolean) => (back ? include(paths) : exclude(paths)),
@@ -106,6 +116,7 @@ export function App({ api }: { api: Api }) {
   if (state.sources.length === 0) {
     return (
       <div className={dragging ? 'app dragging' : 'app'} {...dropProps}>
+        <div className="drag-bar" aria-hidden="true" />
         <EmptyState
           onPick={(kind) => void actions.pick(kind)}
           onUndo={state.canUndo ? () => void actions.undo() : undefined}

@@ -38,6 +38,7 @@ const api: Api = {
   onMetadataProgress: (cb) => subscribe<MetadataStatus>(EVENTS.metadataProgress, cb),
   onExecuteProgress: (cb) => subscribe<ProgressView>(EVENTS.executeProgress, cb),
   onOpenPaths: (cb) => subscribe<string[]>(EVENTS.openPaths, cb),
+  onFullScreen: (cb) => subscribe<boolean>(EVENTS.fullScreen, cb),
 };
 
 contextBridge.exposeInMainWorld('api', api);
