@@ -41,7 +41,11 @@ export const EVENTS = {
   executeProgress: 'batch:progress',
   openPaths: 'app:open-paths',
   fullScreen: 'window:full-screen',
+  menuCommand: 'menu:command',
 } as const;
+
+/** File menu commands, sent to the page to run like the buttons that do the same. */
+export type MenuCommand = 'addFiles' | 'addFolder' | 'importNames' | 'exportPreview' | 'exportLast' | 'rename' | 'undo';
 
 export type ScanFilter = ScanOptions;
 
@@ -226,4 +230,6 @@ export interface Api {
   onOpenPaths(cb: (paths: string[]) => void): () => void;
   /** The window entered (true) or left (false) full screen. */
   onFullScreen(cb: (on: boolean) => void): () => void;
+  /** A File menu command to run (src/main/menu.ts). */
+  onMenuCommand(cb: (command: MenuCommand) => void): () => void;
 }

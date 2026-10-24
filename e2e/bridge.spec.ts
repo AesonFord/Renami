@@ -8,7 +8,7 @@ import { scanAndPlan } from './helpers.js';
 
 const API_METHODS = [
   'buildPlan', 'canUndo', 'cancel', 'clear', 'copyText', 'deletePreset', 'execute', 'fileDetails', 'listPresets',
-  'onExecuteProgress', 'onFullScreen', 'onMetadataProgress', 'onOpenPaths', 'openFile', 'pathForFile', 'pickFolder', 'pickPaths',
+  'onExecuteProgress', 'onFullScreen', 'onMenuCommand', 'onMetadataProgress', 'onOpenPaths', 'openFile', 'pathForFile', 'pickFolder', 'pickPaths',
   'platform', 'platformSync', 'readText', 'savePreset', 'saveText', 'scan', 'showInFolder', 'takeOpenPaths', 'tokenValues', 'undo',
 ];
 

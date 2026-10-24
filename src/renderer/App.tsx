@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
-import type { Api, PreviewRow } from '../shared/ipc.js';
+import type { Api, MenuCommand, PreviewRow } from '../shared/ipc.js';
 import { ActionBar } from './components/ActionBar.js';
 import { EmptyState } from './components/EmptyState.js';
 import { FilesStrip } from './components/FilesStrip.js';
@@ -79,6 +79,21 @@ export function App({ api }: { api: Api }) {
       }),
     [api],
   );
+
+  // File menu commands run like the buttons, and only when the button would work. Reassigned every
+  // render so the guards read current state; the subscription below stays put.
+  const runMenuCommand = useRef<(command: MenuCommand) => void>(() => {});
+  runMenuCommand.current = (command) => {
+    if (state.busy !== null || dialogOutcome) return;
+    if (command === 'addFiles') void actions.pick('files');
+    else if (command === 'addFolder') void actions.pick('folder');
+    else if (command === 'importNames' && state.sources.length > 0) void actions.importNames();
+    else if (command === 'exportPreview' && rows.length > 0) void actions.exportPreview();
+    else if (command === 'exportLast' && state.lastChanges.length > 0) void actions.exportLastBatch();
+    else if (command === 'rename' && blockedReason === null) void actions.rename();
+    else if (command === 'undo' && state.canUndo) void actions.undo();
+  };
+  useEffect(() => api.onMenuCommand((command) => runMenuCommand.current(command)), [api]);
 
   const { updateSettings, addPaths, pathForFile, include, exclude } = actions;
   const toggleFiles = useCallback(

@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import type { Platform } from '../core/types.js';
-import { EVENTS, INVOKE, type Api, type MetadataStatus, type ProgressView } from '../shared/ipc.js';
+import { EVENTS, INVOKE, type Api, type MenuCommand, type MetadataStatus, type ProgressView } from '../shared/ipc.js';
 
 function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
   const listener = (_event: IpcRendererEvent, payload: T): void => cb(payload);
@@ -39,6 +39,7 @@ const api: Api = {
   onExecuteProgress: (cb) => subscribe<ProgressView>(EVENTS.executeProgress, cb),
   onOpenPaths: (cb) => subscribe<string[]>(EVENTS.openPaths, cb),
   onFullScreen: (cb) => subscribe<boolean>(EVENTS.fullScreen, cb),
+  onMenuCommand: (cb) => subscribe<MenuCommand>(EVENTS.menuCommand, cb),
 };
 
 contextBridge.exposeInMainWorld('api', api);

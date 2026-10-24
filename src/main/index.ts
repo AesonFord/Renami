@@ -423,11 +423,17 @@ void app.whenReady().then(async () => {
   const buildMenu = (): void =>
     Menu.setApplicationMenu(
       Menu.buildFromTemplate(
-        menuTemplate(process.platform, devUrl !== null, {
-          autoCheck: updater.autoCheck,
-          checkNow: () => void updater.checkNow(true),
-          setAutoCheck: (on) => void updater.setAutoCheck(on).then(buildMenu),
-        }),
+        menuTemplate(
+          process.platform,
+          devUrl !== null,
+          {
+            autoCheck: updater.autoCheck,
+            checkNow: () => void updater.checkNow(true),
+            setAutoCheck: (on) => void updater.setAutoCheck(on).then(buildMenu),
+          },
+          // The page runs them, with the same guards as its buttons.
+          { run: (command) => send(EVENTS.menuCommand, command) },
+        ),
       ),
     );
   buildMenu();

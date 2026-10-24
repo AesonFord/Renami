@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 import type { RenameSettings } from '../../src/core/types.js';
-import type { Api, FilesSummary, MetadataStatus, PlanView, ProgressView } from '../../src/shared/ipc.js';
+import type { Api, FilesSummary, MenuCommand, MetadataStatus, PlanView, ProgressView } from '../../src/shared/ipc.js';
 import { row } from './fixtures.js';
 
 export type FakeApi = Api & {
@@ -8,6 +8,7 @@ export type FakeApi = Api & {
   emitProgress(progress: ProgressView): void;
   emitOpenPaths(paths: string[]): void;
   emitFullScreen(on: boolean): void;
+  emitMenuCommand(command: MenuCommand): void;
 };
 
 export function summaryFor(paths: string[]): FilesSummary {
@@ -36,6 +37,7 @@ export function createFakeApi(overrides: Partial<Api> = {}): FakeApi {
   const progressListeners = new Set<(p: ProgressView) => void>();
   const openListeners = new Set<(p: string[]) => void>();
   const fullScreenListeners = new Set<(on: boolean) => void>();
+  const menuListeners = new Set<(c: MenuCommand) => void>();
   const emitMetadata = (s: MetadataStatus) => metadataListeners.forEach((cb) => cb(s));
   const api: FakeApi = {
     platform: vi.fn(async () => 'darwin' as const),
@@ -93,10 +95,17 @@ export function createFakeApi(overrides: Partial<Api> = {}): FakeApi {
         fullScreenListeners.delete(cb);
       };
     }),
+    onMenuCommand: vi.fn((cb: (c: MenuCommand) => void) => {
+      menuListeners.add(cb);
+      return () => {
+        menuListeners.delete(cb);
+      };
+    }),
     emitMetadata,
     emitProgress: (p) => progressListeners.forEach((cb) => cb(p)),
     emitOpenPaths: (p) => openListeners.forEach((cb) => cb(p)),
     emitFullScreen: (on) => fullScreenListeners.forEach((cb) => cb(on)),
+    emitMenuCommand: (c) => menuListeners.forEach((cb) => cb(c)),
     ...overrides,
   };
   return api;
