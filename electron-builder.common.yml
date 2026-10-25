@@ -1,0 +1,37 @@
+# What every Renami build shares. electron-builder.yml (direct downloads: .dmg, NSIS, AppImage,
+# .deb) and electron-builder.store.yml (Mac App Store, Microsoft Store) both extend it. Signing
+# identities and targets live in those files, not here.
+directories:
+  output: dist
+files:
+  - out/**
+  # The npm command line is built into out/cli too; it isn't part of the app.
+  - "!out/cli/**"
+  - package.json
+# ExifTool is a real program, not JavaScript, so it must live outside the asar archive.
+# exiftool-vendored finds the unpacked copy by itself.
+asarUnpack:
+  - node_modules/exiftool-vendored*/**/*
+mac:
+  category: public.app-category.productivity
+  icon: build/renami-logo.png
+  # Folders and media dropped on the dock icon, and "Open With" in Finder, reach the app as
+  # open-file events (src/main/index.ts).
+  extendInfo:
+    CFBundleDocumentTypes:
+      - CFBundleTypeName: Folder
+        CFBundleTypeRole: Viewer
+        LSHandlerRank: None
+        LSItemContentTypes: [public.folder]
+      - CFBundleTypeName: Media file
+        CFBundleTypeRole: Viewer
+        LSHandlerRank: None
+        LSItemContentTypes: [public.image, public.movie, public.audio]
+    # Renaming in these locations triggers a macOS privacy prompt; these are its explanation lines.
+    NSDesktopFolderUsageDescription: Renami renames files where you drop them, including the Desktop.
+    NSDocumentsFolderUsageDescription: Renami renames files where you drop them, including Documents.
+    NSDownloadsFolderUsageDescription: Renami renames files where you drop them, including Downloads.
+    NSRemovableVolumesUsageDescription: Renami renames files on removable drives you drop into it.
+    NSNetworkVolumesUsageDescription: Renami renames files on network drives you drop into it.
+win:
+  icon: build/renami-logo.png

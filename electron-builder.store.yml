@@ -1,0 +1,46 @@
+# App store builds: a Mac App Store .pkg on macOS and a Microsoft Store .appx on Windows.
+# `npm run dist:store`. On Linux it is not a store build: Flathub and the Snap Store build from
+# their own manifests (see "App store builds" in the README).
+#
+# Extends the common config, not electron-builder.yml: that one opts into ad-hoc signing with
+# identity "-", and an extending config can't set identity back to "not set", which is what lets
+# electron-builder find the store certificate in the keychain (or take CSC_NAME / CSC_LINK).
+# Store installs skip the update check at run time; see src/main/distribution.ts.
+extends: ./electron-builder.common.yml
+appId: app.renami
+productName: Renami
+# The same hardening as electron-builder.release.yml (test/release/store-config.test.ts checks).
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
+  enableEmbeddedAsarIntegrityValidation: true
+  # Flipping fuses invalidates Electron's own signature. The store signature replaces this one; it
+  # keeps an unsigned local build (no certificate) launchable for a look.
+  resetAdHocDarwinSignature: true
+mac:
+  target: mas
+# No identity: electron-builder picks the "Apple Distribution" (or "3rd Party Mac Developer
+# Application") certificate from the keychain. Without one the build packs the app, then fails at
+# signing; a submission needs that certificate, the matching "3rd Party Mac Developer Installer"
+# certificate, and the provisioning profile below. The Mac App Store wants the sandbox, not the
+# hardened runtime, which electron-builder leaves off for mas unless asked.
+mas:
+  entitlements: build/entitlements.mas.plist
+  entitlementsInherit: build/entitlements.mas.inherit.plist
+  # Download a Mac App Store provisioning profile for app.renami from the Apple Developer site,
+  # save it as build/embedded.provisionprofile (git-ignored), and uncomment:
+  # provisioningProfile: build/embedded.provisionprofile
+  artifactName: "${productName}-mas-${arch}.${ext}"
+win:
+  target: appx
+appx:
+  # The values Partner Center shows under Product management › Product identity. Until they are
+  # replaced, the package builds for local testing only and the Store refuses it.
+  identityName: AesonFord.Renami
+  publisher: CN=00000000-0000-0000-0000-000000000000
+  publisherDisplayName: Renami
+  applicationId: Renami
+  artifactName: "${productName}-win-${arch}.${ext}"

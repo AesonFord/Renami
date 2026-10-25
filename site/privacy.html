@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy policy · Renami</title>
+  <meta name="description" content="Renami runs on your computer and sends no information about you or your files to anyone. This page explains the one network request it makes and what it stores.">
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="topnav" aria-label="Site">
+    <a class="home" href="./"><img src="logo.svg" alt="" width="24" height="24">Renami</a>
+    <a href="./#download">Download</a>
+    <a href="help.html">Help</a>
+    <a href="support.html">Support</a>
+    <a href="privacy.html" aria-current="page">Privacy</a>
+  </nav>
+
+  <main class="page">
+    <h1>Privacy policy</h1>
+    <p class="lede">Renami runs on your computer. It has no account, collects no analytics, shows no ads, and sends no information about you or your files to anyone. The one network request it makes is a check for a newer version, which you can turn off.</p>
+    <p class="meta">Effective 24 October 2026. Applies to Renami 0.4.0 and later.</p>
+
+    <section id="files">
+      <h2>Your files</h2>
+      <p>Renami reads the files and folders you add to it so it can show their names, sizes and dates, and the details its name tokens use: date taken, camera make and model, lens, exposure settings, image size, GPS coordinates, duration, frame rate, bitrate, and audio tags such as artist, album and title. It reads these details with a copy of <a href="https://exiftool.org/">ExifTool</a> that ships inside the app. Checksums for the <code>{crc32}</code> and <code>{md5}</code> tokens are computed on your computer, and so are the previews of images, RAW and HEIC photos, video, audio and PDF files shown in the window.</p>
+      <p>None of this leaves your computer. Renami renames, moves or changes the dates of only the files you added and left checked, and only when you click Rename. You can undo a rename until you quit the app.</p>
+    </section>
+
+    <section id="stored">
+      <h2>What Renami stores on your computer</h2>
+      <table>
+        <thead><tr><th>File</th><th>What it holds</th></tr></thead>
+        <tbody>
+          <tr><td><code>presets.json</code></td><td>The presets you save: a name pattern and the options with it, including a destination folder if you chose one. Presets never hold your file list.</td></tr>
+          <tr><td><code>updates.json</code></td><td>Whether the automatic update check is on, the time of the last check, and a version you chose to skip.</td></tr>
+          <tr><td><code>renami.log</code></td><td>Errors Renami ran into, with the time. An error message can include the path of the file it concerns. Nothing is ever sent from this file; it is there for you to attach to a bug report if you wish.</td></tr>
+        </tbody>
+      </table>
+      <p>These live in Renami's application data folder: <code>~/Library/Application Support/Renami</code> on macOS, <code>%APPDATA%\Renami</code> on Windows, and <code>~/.config/Renami</code> on Linux. Renami's window also remembers its column and preview panel widths in the same folder. Uninstalling the app does not remove this folder; delete it yourself if you want nothing left behind.</p>
+      <p>Exporting a preview or a finished rename writes a CSV file where you choose. Those files are yours and Renami keeps no copy.</p>
+    </section>
+
+    <section id="updates">
+      <h2>Checking for updates</h2>
+      <p>Renami downloaded from this site asks GitHub whether a newer version exists: at most once a day, and whenever you choose <strong>Check for Updates…</strong> from the menu. That request goes to <code>api.github.com</code> and carries only Renami's version number, in the form <code>Renami/0.4.0</code>, as its user agent. Like any request on the internet, it also shows GitHub the IP address it came from. GitHub's handling of that request is covered by the <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub privacy statement</a>. Renami sends nothing else, and nothing about your files.</p>
+      <p>When a newer version is out, Renami tells you and offers to open its download page in your browser. It never downloads or installs anything by itself. To turn the daily check off, clear <strong>Check for Updates Automatically</strong>. It's in the Renami menu on macOS and in the Help menu on Windows and Linux.</p>
+      <p>Renami installed from an app store (the Mac App Store, the Microsoft Store, Flathub or the Snap Store) has no update check at all: the store delivers updates, the menu items are absent, and the app makes no network requests.</p>
+    </section>
+
+    <section id="permissions">
+      <h2>Permissions</h2>
+      <p>On macOS, the system asks before an app touches your Desktop, Documents or Downloads folders, or removable and network drives. Renami asks for access to a location only when you drop or choose files there, because that is where it renames them. It does not ask for your camera, microphone, contacts, calendar, location or anything else.</p>
+    </section>
+
+    <section id="third-parties">
+      <h2>Third parties</h2>
+      <p>Renami contains no analytics, advertising or crash-reporting services. The only outside service it talks to is GitHub, for the update check described above and for the pages you open yourself by clicking a link in the app, such as the download page or the project site in the About window.</p>
+    </section>
+
+    <section id="children">
+      <h2>Children</h2>
+      <p>Renami collects no personal information from anyone, children included.</p>
+    </section>
+
+    <section id="open-source">
+      <h2>Open source</h2>
+      <p>Renami is free software under the GNU General Public License, version 3 or later. Its complete source code is at <a href="https://github.com/AesonFord/Renami">github.com/AesonFord/Renami</a>, so everything this page says can be checked.</p>
+    </section>
+
+    <section id="changes">
+      <h2>Changes to this policy</h2>
+      <p>If Renami ever changes what it does with your data, this page changes with it, with a new effective date at the top. The <a href="https://github.com/AesonFord/Renami/commits/main/site/privacy.html">history of this page</a> is public.</p>
+    </section>
+
+    <section id="contact">
+      <h2>Questions</h2>
+      <p>Ask on the project's <a href="https://github.com/AesonFord/Renami/issues">issue tracker</a>. For a security problem, please follow the <a href="https://github.com/AesonFord/Renami/blob/main/SECURITY.md">security policy</a> instead of opening a public issue.</p>
+    </section>
+  </main>
+
+  <footer>
+    <a href="help.html">Help</a>
+    <a href="support.html">Support</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="https://github.com/AesonFord/Renami">Source on GitHub</a>
+    <a href="https://github.com/AesonFord/Renami/releases">Releases</a>
+    <span>GPL-3.0-or-later</span>
+  </footer>
+</body>
+</html>

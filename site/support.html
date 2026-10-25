@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Support · Renami</title>
+  <meta name="description" content="Get help with Renami: answers to common questions, how to report a bug, and where to find the log file.">
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="topnav" aria-label="Site">
+    <a class="home" href="./"><img src="logo.svg" alt="" width="24" height="24">Renami</a>
+    <a href="./#download">Download</a>
+    <a href="help.html">Help</a>
+    <a href="support.html" aria-current="page">Support</a>
+    <a href="privacy.html">Privacy</a>
+  </nav>
+
+  <main class="page">
+    <h1>Support</h1>
+    <p class="lede">If you're stuck or have found a bug, start with the answers below, then the <a href="help.html">user guide</a>. If that doesn't settle it, open an issue and the maintainer will take a look.</p>
+    <p class="meta">Only the latest release gets fixes, so please update before you report a problem.</p>
+
+    <section id="contact">
+      <h2>Get in touch</h2>
+      <ul>
+        <li><strong>Bugs and feature requests:</strong> open an issue at <a href="https://github.com/AesonFord/Renami/issues">github.com/AesonFord/Renami/issues</a>. Search first; someone may have reported it already.</li>
+        <li><strong>Security problems:</strong> don't open a public issue. Use the private report form described in the <a href="https://github.com/AesonFord/Renami/blob/main/SECURITY.md">security policy</a>. You'll hear back within 7 days.</li>
+        <li><strong>Privacy:</strong> the <a href="privacy.html">privacy policy</a> explains what Renami stores and the one request it makes.</li>
+      </ul>
+    </section>
+
+    <section id="bug-report">
+      <h2>What to put in a bug report</h2>
+      <ol>
+        <li><strong>Your Renami version.</strong> On macOS, Renami menu, then About Renami. On Windows, Settings, Apps, Installed apps. On Linux, <code>flatpak info app.renami</code>, <code>snap list</code>, or <code>dpkg -s renami</code>. A copy downloaded from this site also tells you under <strong>Check for Updates…</strong>.</li>
+        <li><strong>Your operating system and version</strong>, and whether you installed Renami from this site, from an app store, or built it yourself.</li>
+        <li><strong>What you did and what happened</strong>: the pattern you used, the options you set, a few example file names before and after, and what you expected instead.</li>
+        <li><strong>The log file</strong>, if Renami showed an error or crashed. It is called <code>renami.log</code> and lives in <code>~/Library/Application Support/Renami</code> on macOS, <code>%APPDATA%\Renami</code> on Windows, and <code>~/.config/Renami</code> on Linux. It holds error messages and times, which can include file paths, so read it over before you attach it.</li>
+      </ol>
+    </section>
+
+    <section id="faq">
+      <h2>Common questions</h2>
+
+      <h3>Nothing was renamed, and Renami says files changed since the preview</h3>
+      <p>Renami checks every file again just before renaming. If one has been renamed, moved, or edited since the preview was made, perhaps by another program or a sync service, it stops and renames nothing, so the names you checked are the names you get. The preview is refreshed; look it over and click Rename again.</p>
+
+      <h3>Rename is greyed out</h3>
+      <p>The status under the preview says why: the pattern has an error, Renami is still reading file details, or some files have errors. A file with an error, such as a name that would collide with an existing file or a token with no value and no fallback, blocks the whole batch. Fix the pattern, or untick those files to leave them out, and Rename comes back.</p>
+
+      <h3>Can I undo after quitting?</h3>
+      <p>Not from the app. Undo Last Rename works until you quit, and Renami warns you before quitting while an undo is still available. For renames you want to be able to reverse later, use the <a href="https://github.com/AesonFord/Renami#command-line">command line</a> with <code>--journal</code>, which writes an undo file you can replay any time. Before a large rename, Export Preview gives you a CSV of every old and new name, which is a good record to keep.</p>
+
+      <h3>Some names got a number added, or a token came out empty</h3>
+      <p>When two files would end up with the same name, Renami adds a suffix to the later one and flags the row. When a token has no value for a file, say <code>{camera_model}</code> on a screenshot, the token renders as nothing, and the row is flagged too. Tick <strong>Show only files that need a look</strong> above the preview to see just those rows. A fallback, written <code>{camera_model|unknown}</code>, fills the gap; adding <code>{seq}</code> keeps names apart.</p>
+
+      <h3>Reading file details is slow</h3>
+      <p>Photo, video and audio details come from ExifTool, which reads each file. Large video files and network or external drives take longest. Checksums (<code>{crc32}</code>, <code>{md5}</code>) read every byte of every file, so use them only when you need them. You can keep editing the pattern while Renami reads; the preview fills in as it goes.</p>
+
+      <h3>macOS asks whether Renami may access my Desktop, Documents or Downloads</h3>
+      <p>That is macOS protecting those folders. Renami needs the permission to rename files there, and asks only when you add files from such a place. If you declined and want to change your mind, open System Settings, Privacy &amp; Security, Files and Folders, and switch Renami's access back on.</p>
+
+      <h3>The created date didn't change on Linux</h3>
+      <p>Linux file systems don't let programs set a file's creation date, so the <strong>Set created date to date taken</strong> option is disabled there. The modified date works on every system.</p>
+
+      <h3>A HEIC or RAW photo shows no preview</h3>
+      <p>For a camera RAW file, Renami shows the preview image the camera stored inside it, so a RAW file without one shows no picture. HEIC files are decoded in full. In both cases the file's details and new name are unaffected.</p>
+
+      <h3>I downloaded Renami from this site and my system won't open it</h3>
+      <p>The downloads on this site are not signed with an Apple or Microsoft certificate, so the system asks before the first launch. The <a href="./#install">first launch notes</a> on the download page explain the one-time step for macOS and Windows. If you installed Renami from an app store, it is signed and this step doesn't apply.</p>
+
+      <h3>The AppImage won't start on Ubuntu</h3>
+      <p>Ubuntu 24.04 and later restrict unprivileged user namespaces, which the AppImage needs. Install the <code>.deb</code> instead, or allow the AppImage with an AppArmor profile.</p>
+
+      <h3>How do I turn off the update check?</h3>
+      <p>Clear <strong>Check for Updates Automatically</strong>: it's in the Renami menu on macOS and the Help menu on Windows and Linux. Renami then never contacts the network unless you choose Check for Updates… yourself. If you installed Renami from an app store, that store handles updates.</p>
+
+      <h3>Where do my presets live, and can I move them to another computer?</h3>
+      <p>In <code>presets.json</code> in the application data folder listed above. Copy that file to the same place on the other computer. A preset holds a pattern and its options, never the files.</p>
+
+      <h3>Can I rename from a script?</h3>
+      <p>Yes. The <code>renami</code> command line uses the same engine as the app, previews by default, and needs <code>--apply</code> to change anything. The <a href="https://github.com/AesonFord/Renami#command-line">README</a> documents it, including settings files, JSON output and exit codes.</p>
+    </section>
+
+    <section id="verify">
+      <h2>Checking a download</h2>
+      <p>Every release on GitHub comes with a <code>SHA256SUMS</code> file and a build attestation that proves the installer was built by the project's own release workflow. The <a href="https://github.com/AesonFord/Renami/blob/main/SECURITY.md#verifying-a-download">security policy</a> shows the two commands to check them.</p>
+    </section>
+  </main>
+
+  <footer>
+    <a href="help.html">Help</a>
+    <a href="support.html">Support</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="https://github.com/AesonFord/Renami">Source on GitHub</a>
+    <a href="https://github.com/AesonFord/Renami/releases">Releases</a>
+    <span>GPL-3.0-or-later</span>
+  </footer>
+</body>
+</html>

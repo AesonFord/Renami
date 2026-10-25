@@ -8,3 +8,6 @@ out/
 test-results/
 playwright-report/
 coverage/
+
+# Mac App Store provisioning profile (electron-builder.store.yml)
+build/embedded.provisionprofile

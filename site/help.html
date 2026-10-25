@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>User guide · Renami</title>
+  <meta name="description" content="How to use Renami: add files, write a name pattern with tokens, check the preview, rename, and undo. Every token and keyboard shortcut.">
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="topnav" aria-label="Site">
+    <a class="home" href="./"><img src="logo.svg" alt="" width="24" height="24">Renami</a>
+    <a href="./#download">Download</a>
+    <a href="help.html" aria-current="page">Help</a>
+    <a href="support.html">Support</a>
+    <a href="privacy.html">Privacy</a>
+  </nav>
+
+  <main class="page">
+    <h1>User guide</h1>
+    <p class="lede">Renami renames files in bulk. You add files, write one name pattern, check the live preview, and click Rename. Nothing changes on disk until you do, and a rename can be undone until you quit.</p>
+    <p class="meta">For Renami 0.4.0. Keyboard shortcuts are written for macOS; on Windows and Linux, read <kbd>⌘</kbd> as <kbd>Ctrl</kbd>.</p>
+
+    <ul class="toc">
+      <li><a href="#add">Adding files</a></li>
+      <li><a href="#filters">Filters and folder mode</a></li>
+      <li><a href="#pattern">The name pattern</a></li>
+      <li><a href="#tokens">Every token</a></li>
+      <li><a href="#preview">The preview</a></li>
+      <li><a href="#sequence">Sequence</a></li>
+      <li><a href="#find-replace">Find &amp; replace</a></li>
+      <li><a href="#cleanup">Case &amp; cleanup</a></li>
+      <li><a href="#move">Move into folders</a></li>
+      <li><a href="#dates">File dates</a></li>
+      <li><a href="#presets">Presets</a></li>
+      <li><a href="#import-export">Importing and exporting names</a></li>
+      <li><a href="#rename">Renaming and undo</a></li>
+      <li><a href="#shortcuts">Keyboard shortcuts</a></li>
+      <li><a href="#cli">The command line</a></li>
+    </ul>
+
+    <section id="add">
+      <h2>Adding files</h2>
+      <p>Drop files or folders anywhere on the window, or use <strong>Add Files…</strong> (<kbd>⌘O</kbd>) and <strong>Add Folder…</strong> (<kbd>⇧⌘O</kbd>) in the File menu. A folder adds the files directly inside it; turn on <strong>Include subfolders</strong> in the filters to go deeper. The strip at the top lists each source you added, with a count, and a button to remove it.</p>
+      <p>You can also start from outside the app: drop files or a folder on Renami's icon in the Dock, choose Renami under <strong>Open With</strong> in Finder or your file manager, or on Windows right-click a folder in Explorer and pick <strong>Rename with Renami</strong>. If Renami is already open, the files go to the open window.</p>
+      <p>Renami reads each file's details as it is added: dates, camera settings, audio tags and so on. The status in the strip says <em>Reading file details…</em> while this runs. You can write the pattern meanwhile; the preview fills in as details arrive.</p>
+    </section>
+
+    <section id="filters">
+      <h2>Filters and folder mode</h2>
+      <p>Click <strong>Filters</strong> in the strip to narrow what Renami lists from your sources:</p>
+      <ul>
+        <li><strong>Include subfolders</strong> adds the files in every folder below a dropped folder.</li>
+        <li><strong>File types</strong> keeps only the extensions you pick, such as <code>jpg</code> and <code>heic</code>. Files with no extension have their own entry.</li>
+        <li><strong>Name contains</strong> keeps files whose name contains the text, ignoring case. Write a regular expression if you like; an invalid one is matched as plain text.</li>
+        <li><strong>Size from</strong> and <strong>Size to</strong>, in megabytes, and a range of <strong>modified</strong> dates, inclusive.</li>
+      </ul>
+      <p><strong>Folder mode</strong> switches what gets renamed: instead of the files, Renami lists the folders directly inside each source, and the pattern names those folders. Subfolder and file-type filters don't apply in folder mode. Folders have no extension, so their whole name is <code>{name}</code>.</p>
+      <p>Files a filter leaves out are not shown and are never touched.</p>
+    </section>
+
+    <section id="pattern">
+      <h2>The name pattern</h2>
+      <p>The pattern at the top of the window is the new name for every file. Plain text is kept as written; anything in braces is a <em>token</em> that Renami fills in from the file:</p>
+      <pre>Hawaii_{date_taken:YYYY-MM-DD}_{seq:3}
+IMG_4821.jpg  becomes  Hawaii_2024-07-04_001.jpg</pre>
+      <p>The extension is kept automatically; don't write it in the pattern. The default pattern, <code>{name}</code>, keeps each file's current name, which is the starting point for a find &amp; replace or a case change.</p>
+      <table>
+        <thead><tr><th>Write</th><th>To get</th></tr></thead>
+        <tbody>
+          <tr><td><code>{token}</code></td><td>The token's value, such as <code>{camera_model}</code>.</td></tr>
+          <tr><td><code>{date_taken:YYYY-MM-DD}</code></td><td>A date in the format you give. <code>YYYY</code> year, <code>MM</code> month, <code>MMM</code> Jan, <code>DD</code> day, <code>ddd</code> Thu, <code>HH</code> hour, <code>hh A</code> 12-hour clock, <code>mm</code> minute, <code>ss</code> second, <code>SSS</code> milliseconds. Other characters are kept as written.</td></tr>
+          <tr><td><code>{seq:4}</code></td><td>A number padded to that many digits (1 to 10): <code>0001</code>. Works for <code>{seq}</code>, <code>{track}</code> and <code>{disc}</code>. Without a format, <code>{seq}</code> uses the Digits setting on the Sequence tab.</td></tr>
+          <tr><td><code>{artist|Unknown}</code></td><td>A fallback, used when the file has no value for the token. Anything after <code>|</code> is the fallback, and it can be empty: <code>{artist|}</code>.</td></tr>
+          <tr><td><code>/</code></td><td>A folder separator. <code>{date_taken:YYYY}/{name}</code> moves each file into a folder named after its year, creating it if needed. See <a href="#move">Move into folders</a>.</td></tr>
+          <tr><td><code>{{</code> and <code>}}</code></td><td>A literal brace.</td></tr>
+        </tbody>
+      </table>
+      <p>The palette under the pattern inserts the common tokens with a click, grouped as Dates, Number, File, Photo &amp; video and Audio; <strong>All tokens…</strong> opens a searchable list of every token, with its value for the first file. Click a token already in the pattern to edit it in place: its date format, digits or fallback, or to remove it. A pattern error is shown under the field, with the position, and Rename stays off until it's fixed.</p>
+    </section>
+
+    <section id="tokens">
+      <h2>Every token</h2>
+      <p>A token with no value for a file comes out empty and the row is flagged, unless you give it a fallback.</p>
+      <h3>Names and places</h3>
+      <table>
+        <thead><tr><th>Token</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td><code>{name}</code></td><td>The current name without its extension, after any find &amp; replace rules on the current name.</td></tr>
+          <tr><td><code>{ext}</code></td><td>The extension, without the dot. Empty for a file with none.</td></tr>
+          <tr><td><code>{folder}</code></td><td>The name of the folder the file is in.</td></tr>
+          <tr><td><code>{parent}</code></td><td>The name of the folder above that one.</td></tr>
+          <tr><td><code>{seq}</code></td><td>The sequence number, as set up on the <a href="#sequence">Sequence</a> tab.</td></tr>
+        </tbody>
+      </table>
+      <h3>Dates</h3>
+      <p>These take a format: <code>{created:YYYY-MM-DD_HH-mm}</code>. Without one, Renami uses <code>YYYY-MM-DD</code>.</p>
+      <table>
+        <thead><tr><th>Token</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td><code>{date_taken}</code></td><td>When a photo, video or recording was made, from its metadata. With the <a href="#dates">File dates</a> options, a date found in the file name can stand in, and a clock shift applies.</td></tr>
+          <tr><td><code>{created}</code></td><td>The file's creation date on disk.</td></tr>
+          <tr><td><code>{modified}</code></td><td>The file's last-modified date on disk.</td></tr>
+        </tbody>
+      </table>
+      <h3>Photos and video</h3>
+      <table>
+        <thead><tr><th>Token</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td><code>{camera_make}</code>, <code>{camera_model}</code>, <code>{lens}</code></td><td>From the file's metadata.</td></tr>
+          <tr><td><code>{iso}</code></td><td>ISO, as a number.</td></tr>
+          <tr><td><code>{aperture}</code></td><td>Such as <code>f2.8</code>.</td></tr>
+          <tr><td><code>{shutter}</code></td><td>Such as <code>1-250</code> for a 1/250 s exposure, or <code>2s</code>.</td></tr>
+          <tr><td><code>{focal_length}</code></td><td>Such as <code>35mm</code>.</td></tr>
+          <tr><td><code>{width}</code>, <code>{height}</code></td><td>Pixel size.</td></tr>
+          <tr><td><code>{gps_lat}</code>, <code>{gps_lon}</code></td><td>Coordinates to four decimal places.</td></tr>
+          <tr><td><code>{duration}</code></td><td>Such as <code>3m07s</code> or <code>1h02m30s</code>.</td></tr>
+          <tr><td><code>{fps}</code></td><td>Frame rate.</td></tr>
+          <tr><td><code>{bitrate}</code></td><td>Bitrate in kbps.</td></tr>
+        </tbody>
+      </table>
+      <h3>Music and audio</h3>
+      <table>
+        <thead><tr><th>Token</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td><code>{title}</code>, <code>{artist}</code>, <code>{album_artist}</code>, <code>{album}</code>, <code>{composer}</code>, <code>{genre}</code></td><td>From the file's tags.</td></tr>
+          <tr><td><code>{track}</code>, <code>{disc}</code></td><td>Track and disc number. Take a digits format: <code>{track:2}</code>.</td></tr>
+          <tr><td><code>{year}</code></td><td>The release year from the tags.</td></tr>
+        </tbody>
+      </table>
+      <h3>Size and checksums</h3>
+      <table>
+        <thead><tr><th>Token</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td><code>{size}</code></td><td>Such as <code>340KB</code> or <code>1.2MB</code>.</td></tr>
+          <tr><td><code>{size_bytes}</code></td><td>The exact size in bytes.</td></tr>
+          <tr><td><code>{crc32}</code>, <code>{md5}</code></td><td>Checksums of the file's contents. Renami reads every byte to compute them, so they take a while on large files.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="preview">
+      <h2>The preview</h2>
+      <p>Every file is a row: a checkbox, the current name, and the new name. The rows update as you type. A flag on a row means it needs a look:</p>
+      <ul>
+        <li><strong>A suffix was added</strong>, such as <code>_2</code>, because the name was already taken by another file in the batch or on disk. Add <code>{seq}</code> or another token that tells them apart.</li>
+        <li><strong>A token had no value</strong>, so part of the name is empty, or the file's metadata couldn't be read. Give the token a fallback, or accept it.</li>
+        <li><strong>An error</strong>: the new name is empty, a name or folder name is longer than the file system allows, the full path is longer than Windows allows, the destination can't be written, or a folder would be moved to another drive. Errors block the whole rename until you fix the pattern or leave those files out.</li>
+      </ul>
+      <p>Tick <strong>Show only files that need a look</strong> above the table to hide the rest. Untick a row to leave that file out of the rename; it stays as it is, and the sequence numbers close up around it. The checkbox in the header ticks or unticks every row shown.</p>
+      <p><strong>Type a name</strong> for one file by double-clicking its new name. <kbd>Enter</kbd> keeps it, <kbd>Esc</kbd> gives it up. A typed name wins over the pattern for that file; the extension is kept.</p>
+      <p><strong>See the file</strong> by clicking its row: a panel opens with the image, video, audio player, or PDF, and the file's details, with buttons to show it in Finder or Explorer and to open it in its own app. The arrow keys move through the rows, <kbd>Delete</kbd> leaves the selected file out and moves on, and the panel can be dragged wider or narrower.</p>
+      <p><strong>Columns</strong> can be dragged to resize. Double-click a column edge to fit it, or right-click the header to reset the widths. The arrow keys resize a column edge that has focus.</p>
+      <p>The line under the table sums it up: how many files will be renamed, moved, or left alone, and what still stands in the way of renaming.</p>
+    </section>
+
+    <section id="sequence">
+      <h2>Sequence</h2>
+      <p>The Sequence tab controls <code>{seq}</code>.</p>
+      <ul>
+        <li><strong>Sort by</strong> date taken, created, modified or name, <strong>ascending</strong> or <strong>descending</strong>. Descending numbers the newest file first. Choose <strong>Manual order</strong> to set the order yourself: drag rows in the preview, or press <kbd>Alt</kbd> with the arrow keys on a row.</li>
+        <li><strong>Start at</strong>, <strong>Step</strong> and <strong>Digits</strong>: start at 100 in steps of 10 with 4 digits gives <code>0100</code>, <code>0110</code>, <code>0120</code>.</li>
+        <li><strong>Restart</strong> the count in each folder, or <strong>each day</strong>, <strong>month</strong> or <strong>year</strong> of the sort date. With a restart each day and a date in the pattern, <code>{date_taken:YYYY-MM-DD}_{seq:3}</code> counts from 001 again every morning.</li>
+        <li><strong>Keep same-name files together</strong> gives files that share a name, such as a RAW file and the JPEG shot with it, the same number, so they stay paired after the rename. The preview marks them as paired.</li>
+      </ul>
+      <p>If the pattern doesn't use <code>{seq}</code>, the tab says so, so the settings aren't changed for nothing.</p>
+    </section>
+
+    <section id="find-replace">
+      <h2>Find &amp; replace</h2>
+      <p>Each rule finds text and replaces it, in order, top to bottom. A rule works on either the <strong>current name</strong>, before it becomes <code>{name}</code>, or the <strong>new name</strong>, after the pattern has been applied. Tick <strong>Match case</strong> for an exact-case match, and <strong>Regex</strong> to use a regular expression. Regex rules can use <code>$1</code>, <code>$2</code> and so on for captured groups: find <code>^(\d+)-(\d+)$</code> and replace with <code>$2-$1</code> to swap two numbers. A bad regex is reported under the rule and ignored until fixed.</p>
+      <p>Leave the pattern at <code>{name}</code> to use Renami purely as a find-and-replace tool.</p>
+    </section>
+
+    <section id="cleanup">
+      <h2>Case &amp; cleanup</h2>
+      <ul>
+        <li><strong>Case</strong>: keep as is, lowercase, UPPERCASE, Title Case, Sentence case, snake_case, kebab-case or camelCase, applied to the new name.</li>
+        <li><strong>Spaces to underscores</strong>, and <strong>lowercase extension</strong> (<code>.JPG</code> to <code>.jpg</code>).</li>
+        <li><strong>Strip accents</strong> turns <code>é</code> into <code>e</code>. <strong>ASCII only</strong> does that and replaces every other non-ASCII character with <code>_</code>, for names that must travel anywhere.</li>
+        <li><strong>Extension rules</strong> map one extension to another: <code>jpeg</code> to <code>jpg</code>, <code>tif</code> to <code>tiff</code>. Leave the "to" side empty to drop the extension. Extensions no rule names keep theirs.</li>
+      </ul>
+      <p>Always on: repeated separators are collapsed, and names are made safe for Windows, so a name that works on your Mac still works when the files are copied to a PC.</p>
+    </section>
+
+    <section id="move">
+      <h2>Move into folders</h2>
+      <p>By default each file stays in its own folder and only its name changes. Choose <strong>One folder</strong> and pick a destination to gather every file there. Either way, a <code>/</code> in the pattern makes subfolders: <code>{date_taken:YYYY}/{date_taken:MM}/{name}</code> files photos by year and month, creating the folders as needed. Rows that will move say so in the preview, and undo brings the files back and removes folders it created that are left empty.</p>
+    </section>
+
+    <section id="dates">
+      <h2>File dates</h2>
+      <ul>
+        <li><strong>Set modified date to date taken</strong> and <strong>Set created date to date taken</strong> change the file's dates on disk to match its metadata, so files sort correctly in Finder or Explorer. Only files with a real date taken are changed; the others keep their dates. Linux doesn't let apps change a file's created date, so that option is off there.</li>
+        <li><strong>Shift date taken by</strong> a number of hours and minutes, for a camera whose clock was wrong or set to another time zone. The shift applies wherever the date taken is used: in <code>{date_taken}</code>, in the sort order, and in the dates written to the file.</li>
+        <li><strong>Use a date found in the file name when there is no date taken</strong>: a screenshot called <code>Screenshot 2024-07-04 at 10.18.33.png</code> has no metadata, but its name has a date, and Renami uses that.</li>
+      </ul>
+      <p>A file whose name stays the same but whose dates will change is still part of the rename, and the preview says so.</p>
+    </section>
+
+    <section id="presets">
+      <h2>Presets</h2>
+      <p>A preset saves the pattern and every option on the tabs, but not the files. Click <strong>Save preset</strong> beside the preset list in the strip, name it, and it's there next time you open Renami. Choosing a preset replaces the pattern and options; your file list stays. Presets are kept in <code>presets.json</code> in Renami's application data folder, so you can copy them to another computer.</p>
+    </section>
+
+    <section id="import-export">
+      <h2>Importing and exporting names</h2>
+      <p><strong>Import Names…</strong> (<kbd>⌘I</kbd>) reads a text or CSV file of names and types them into the preview for you. It takes either one new name per line, applied to the rows in preview order, or pairs of <em>current name</em> and <em>new name</em> separated by a tab or a comma, matched to files by their current name. A header line is skipped. This is the way to rename from a spreadsheet: export the preview, edit the new-name column, import it back.</p>
+      <p><strong>Export Preview…</strong> (<kbd>⇧⌘E</kbd>) writes the preview as CSV: each file's current name, new name, status, the date used, its folder and full path. <strong>Export Last Rename…</strong> writes a CSV of every file the last rename changed, from and to, which is a good record to keep before the undo history is gone.</p>
+    </section>
+
+    <section id="rename">
+      <h2>Renaming and undo</h2>
+      <p>Click <strong>Rename</strong> under the preview (the button says how many files), or press <kbd>⌘↩</kbd>. Just before renaming, Renami checks that no file has changed since the preview was made. If one has, nothing is renamed, the preview is refreshed, and you can look it over and try again. While a long rename runs you see its progress and can cancel; a cancelled rename puts every file already moved back where it was.</p>
+      <p>When it's done, a notice offers <strong>Undo</strong>. <strong>Undo Last Rename</strong> in the File menu (<kbd>⌥⌘Z</kbd> on macOS) does the same, until you quit: Renami warns you before quitting while an undo is still possible. Undo skips a file that has changed since the rename, and explains which in a report you can copy.</p>
+      <p>Renami renames files by moving them, so it never rewrites their contents. A move to another drive is a copy, checked, after which the original is deleted; it takes as long as copying does, the copy gets a new created date, and the preview warns you first. Folders can't be moved to another drive.</p>
+    </section>
+
+    <section id="shortcuts">
+      <h2>Keyboard shortcuts</h2>
+      <table>
+        <thead><tr><th>Shortcut</th><th>Does</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>⌘O</kbd></td><td>Add files</td></tr>
+          <tr><td><kbd>⇧⌘O</kbd></td><td>Add a folder</td></tr>
+          <tr><td><kbd>⌘I</kbd></td><td>Import names</td></tr>
+          <tr><td><kbd>⇧⌘E</kbd></td><td>Export the preview as CSV</td></tr>
+          <tr><td><kbd>⌘↩</kbd></td><td>Rename</td></tr>
+          <tr><td><kbd>⌥⌘Z</kbd></td><td>Undo the last rename (macOS; use the File menu elsewhere)</td></tr>
+          <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Move through the rows, previewing each</td></tr>
+          <tr><td><kbd>Delete</kbd></td><td>Leave the selected file out and move to the next</td></tr>
+          <tr><td><kbd>Alt</kbd> + <kbd>↑</kbd> <kbd>↓</kbd></td><td>Move a row, in manual order</td></tr>
+          <tr><td>Double-click a new name</td><td>Type a name for that file</td></tr>
+          <tr><td><kbd>⌘+</kbd> <kbd>⌘-</kbd> <kbd>⌘0</kbd></td><td>Zoom in, out, and back to normal</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="cli">
+      <h2>The command line</h2>
+      <p>The same engine is available as a command for scripts and servers. It previews by default and changes nothing without <code>--apply</code>; with <code>--journal</code> it writes an undo file you can replay any time, even after other runs. Settings the app can save as a preset can be given to it as JSON. See the <a href="https://github.com/AesonFord/Renami#command-line">command line section of the README</a>.</p>
+    </section>
+  </main>
+
+  <footer>
+    <a href="help.html">Help</a>
+    <a href="support.html">Support</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="https://github.com/AesonFord/Renami">Source on GitHub</a>
+    <a href="https://github.com/AesonFord/Renami/releases">Releases</a>
+    <span>GPL-3.0-or-later</span>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The app's entitlements for the Mac App Store build (electron-builder.store.yml). The sandbox is
+  required there. user-selected.read-write covers everything Renami touches: files and folders
+  dropped on the window or chosen in a dialog, and the destination folder from Move into folders.
+  bookmarks.app-scope lets a later version keep access to a destination saved in a preset.
+  No network.client: store installs never check GitHub for updates (src/main/distribution.ts),
+  so the build makes no network requests, and the privacy policy says so.
+  ElectronTeamID and the Electron helpers' entitlements are filled in by @electron/osx-sign.
+-->
+<plist version="1.0">
+  <dict>
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    <key>com.apple.security.files.bookmarks.app-scope</key>
+    <true/>
+  </dict>
+</plist>
