@@ -1,10 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../src/core/types.js';
 import { EmptyState } from '../../src/renderer/components/EmptyState.js';
 import { filterLabel } from '../../src/renderer/components/ExtensionFilter.js';
-import { FilesStrip, type FilesStripProps } from '../../src/renderer/components/FilesStrip.js';
+import { FilesStrip, STATUS_DELAY_MS, type FilesStripProps } from '../../src/renderer/components/FilesStrip.js';
 import { useEscapeKey } from '../../src/renderer/components/useDialogKeys.js';
 
 function stripProps(over: Partial<FilesStripProps> = {}): FilesStripProps {
@@ -49,10 +49,23 @@ describe('FilesStrip', () => {
     expect(props.onRemoveSource).toHaveBeenCalledWith('/photos/beach.jpg');
   });
 
-  it('shows a placeholder count while the first scan runs', () => {
+  it('shows a placeholder count while the first scan runs', async () => {
     renderStrip({ files: null, scanning: true });
     expect(screen.getByTitle('/photos/Hawaii 2024')).toHaveTextContent('Hawaii 2024…');
-    expect(screen.getByRole('status')).toHaveTextContent('Looking for files…');
+    expect(await screen.findByText('Looking for files…')).toBeInTheDocument();
+  });
+
+  it("says nothing about a scan or read that's over in a moment, so typing a filter doesn't blink", () => {
+    vi.useFakeTimers();
+    try {
+      const { rerender } = render(<FilesStrip {...stripProps({ scanning: true, metadata: { done: 0, total: 2, finished: false, exiftoolFailed: false } })} />);
+      act(() => vi.advanceTimersByTime(STATUS_DELAY_MS - 50));
+      rerender(<FilesStrip {...stripProps()} />);
+      act(() => vi.advanceTimersByTime(1000));
+      expect(screen.getByRole('status')).toBeEmptyDOMElement();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('adds files or a folder from the add menu', async () => {
@@ -177,7 +190,7 @@ describe('FilesStrip', () => {
     expect(screen.queryByRole('dialog', { name: 'File types' })).not.toBeInTheDocument();
   });
 
-  it('shows reading progress and folders it could not open', () => {
+  it('shows reading progress and folders it could not open', async () => {
     renderStrip({
       metadata: { done: 3, total: 10, finished: false, exiftoolFailed: false },
       files: {
@@ -187,7 +200,7 @@ describe('FilesStrip', () => {
         unreadableFolders: ['/photos/locked', '/photos/other'],
       },
     });
-    expect(screen.getByRole('status')).toHaveTextContent('Reading file details 3 of 10');
+    expect(await screen.findByText(/Reading file details 3 of 10/)).toBeInTheDocument();
     expect(screen.getByText("2 folders couldn't be opened")).toHaveAttribute('title', '/photos/locked\n/photos/other');
   });
 });

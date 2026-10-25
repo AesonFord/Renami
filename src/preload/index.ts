@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
-import { EVENTS, INVOKE, type Api, type MetadataStatus, type ProgressView } from '../shared/ipc.js';
+import type { Platform } from '../core/types.js';
+import { EVENTS, INVOKE, type Api, type MenuCommand, type MetadataStatus, type ProgressView } from '../shared/ipc.js';
 
 function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
   const listener = (_event: IpcRendererEvent, payload: T): void => cb(payload);
@@ -11,6 +12,7 @@ function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
 
 const api: Api = {
   platform: () => ipcRenderer.invoke(INVOKE.platform),
+  platformSync: process.platform as Platform,
   scan: (paths, filter) => ipcRenderer.invoke(INVOKE.scan, paths, filter),
   buildPlan: (req) => ipcRenderer.invoke(INVOKE.buildPlan, req),
   tokenValues: () => ipcRenderer.invoke(INVOKE.tokenValues),
@@ -31,11 +33,14 @@ const api: Api = {
   fileDetails: (path) => ipcRenderer.invoke(INVOKE.fileDetails, path),
   showInFolder: (path) => ipcRenderer.invoke(INVOKE.showInFolder, path),
   openFile: (path) => ipcRenderer.invoke(INVOKE.openFile, path),
+  isFullScreen: () => ipcRenderer.invoke(INVOKE.isFullScreen),
   // Electron removed File.path; this is the supported way to get a dropped file's real path.
   pathForFile: (file) => webUtils.getPathForFile(file),
   onMetadataProgress: (cb) => subscribe<MetadataStatus>(EVENTS.metadataProgress, cb),
   onExecuteProgress: (cb) => subscribe<ProgressView>(EVENTS.executeProgress, cb),
   onOpenPaths: (cb) => subscribe<string[]>(EVENTS.openPaths, cb),
+  onFullScreen: (cb) => subscribe<boolean>(EVENTS.fullScreen, cb),
+  onMenuCommand: (cb) => subscribe<MenuCommand>(EVENTS.menuCommand, cb),
 };
 
 contextBridge.exposeInMainWorld('api', api);

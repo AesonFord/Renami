@@ -32,6 +32,15 @@ async function clickRename() {
 }
 
 describe('App', () => {
+  it('marks the page while the window is full screen', () => {
+    const api = createFakeApi();
+    render(<App api={api} />);
+    act(() => api.emitFullScreen(true));
+    expect(document.documentElement.dataset.fullscreen).toBe('true');
+    act(() => api.emitFullScreen(false));
+    expect(document.documentElement.dataset.fullscreen).toBeUndefined();
+  });
+
   it('starts as one big drop zone', () => {
     render(<App api={createFakeApi()} />);
     expect(screen.getByRole('heading', { name: 'Drop files or folders here' })).toBeInTheDocument();
@@ -260,6 +269,71 @@ describe('App', () => {
     expect(box).not.toBeChecked();
     await userEvent.click(box);
     await waitFor(() => expect(vi.mocked(api.buildPlan).mock.lastCall?.[0].excluded).toEqual([]));
+  });
+
+  it('runs menu commands through the same actions as the buttons', async () => {
+    const api = createFakeApi();
+    render(<App api={api} />);
+    act(() => api.emitMenuCommand('addFolder'));
+    expect(api.pickPaths).toHaveBeenCalledWith('folder');
+    await screen.findByRole('cell', { name: 'Trip_001.jpg' });
+    act(() => api.emitMetadata({ done: 2, total: 2, finished: true, exiftoolFailed: false }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Rename 2 files' })).toBeEnabled());
+    act(() => api.emitMenuCommand('rename'));
+    await waitFor(() => expect(api.execute).toHaveBeenCalledWith('plan-1'));
+  });
+
+  it('ignores menu commands that do not apply', () => {
+    const api = createFakeApi();
+    render(<App api={api} />);
+    for (const command of ['rename', 'undo', 'importNames', 'exportPreview', 'exportLast'] as const) act(() => api.emitMenuCommand(command));
+    expect(api.execute).not.toHaveBeenCalled();
+    expect(api.undo).not.toHaveBeenCalled();
+    expect(api.readText).not.toHaveBeenCalled();
+    expect(api.saveText).not.toHaveBeenCalled();
+  });
+
+  it('ignores menu commands while renaming', async () => {
+    const running = deferred<Awaited<ReturnType<FakeApi['execute']>>>();
+    const api = await withFiles(createFakeApi({ execute: vi.fn(() => running.promise) }));
+    await clickRename();
+    act(() => api.emitMenuCommand('addFolder'));
+    expect(api.pickPaths).toHaveBeenCalledTimes(1); // only the click that added the folder
+    await act(async () => running.resolve({ status: 'done', renamed: 2, datesChanged: 0, changes: [], sourcesAfter: ['/photos'] }));
+  });
+
+  it('ignores menu commands while a dialog is open', async () => {
+    const api = await withFiles(
+      createFakeApi({
+        execute: vi.fn(async () => ({ status: 'failed' as const, error: 'Disk full', rollback: { complete: true, stranded: [] } })),
+      }),
+    );
+    await clickRename();
+    await screen.findByRole('alertdialog');
+    act(() => api.emitMenuCommand('addFolder'));
+    expect(api.pickPaths).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores Rename from the menu while a new name is being typed', async () => {
+    const api = await withFiles();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Rename 2 files' })).toBeEnabled());
+    fireEvent.doubleClick(within(screen.getAllByRole('row')[1]!).getAllByRole('cell')[1]!);
+    expect(screen.getByRole('textbox', { name: 'New name for a.jpg' })).toHaveFocus();
+    act(() => api.emitMenuCommand('rename'));
+    expect(api.execute).not.toHaveBeenCalled();
+  });
+
+  it('ignores menu commands while the All tokens dialog is open', async () => {
+    const api = await withFiles();
+    await userEvent.click(screen.getByRole('button', { name: 'All tokens…' }));
+    await screen.findByRole('dialog');
+    act(() => api.emitMenuCommand('addFolder'));
+    expect(api.pickPaths).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks whether the window is already full screen, so a reloaded page keeps the right layout', async () => {
+    render(<App api={createFakeApi({ isFullScreen: vi.fn(async () => true) })} />);
+    await waitFor(() => expect(document.documentElement.dataset.fullscreen).toBe('true'));
   });
 
   it('opens the failure dialog and copies the report', async () => {

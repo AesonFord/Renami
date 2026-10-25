@@ -109,7 +109,8 @@ export function PatternBar({ pattern, onChange, extension, error, loadTokenValue
             onClick={openAtCaret}
             onKeyDown={(e) => {
               // The keyboard way to open a token's popover; outside a token, Enter does nothing.
-              if (e.key === 'Enter') {
+              // Cmd/Ctrl+Enter is the File menu's Rename Files.
+              if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
                 e.preventDefault();
                 openAtCaret();
               }

@@ -7,9 +7,9 @@ import { expect, test } from './fixtures.js';
 import { scanAndPlan } from './helpers.js';
 
 const API_METHODS = [
-  'buildPlan', 'canUndo', 'cancel', 'clear', 'copyText', 'deletePreset', 'execute', 'fileDetails', 'listPresets',
-  'onExecuteProgress', 'onMetadataProgress', 'onOpenPaths', 'openFile', 'pathForFile', 'pickFolder', 'pickPaths',
-  'platform', 'readText', 'savePreset', 'saveText', 'scan', 'showInFolder', 'takeOpenPaths', 'tokenValues', 'undo',
+  'buildPlan', 'canUndo', 'cancel', 'clear', 'copyText', 'deletePreset', 'execute', 'fileDetails', 'isFullScreen', 'listPresets',
+  'onExecuteProgress', 'onFullScreen', 'onMenuCommand', 'onMetadataProgress', 'onOpenPaths', 'openFile', 'pathForFile', 'pickFolder', 'pickPaths',
+  'platform', 'platformSync', 'readText', 'savePreset', 'saveText', 'scan', 'showInFolder', 'takeOpenPaths', 'tokenValues', 'undo',
 ];
 
 /** Copies the test photo and a text file into dir, and returns dir. */

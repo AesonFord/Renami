@@ -1,12 +1,14 @@
 import { vi } from 'vitest';
 import type { RenameSettings } from '../../src/core/types.js';
-import type { Api, FilesSummary, MetadataStatus, PlanView, ProgressView } from '../../src/shared/ipc.js';
+import type { Api, FilesSummary, MenuCommand, MetadataStatus, PlanView, ProgressView } from '../../src/shared/ipc.js';
 import { row } from './fixtures.js';
 
 export type FakeApi = Api & {
   emitMetadata(status: MetadataStatus): void;
   emitProgress(progress: ProgressView): void;
   emitOpenPaths(paths: string[]): void;
+  emitFullScreen(on: boolean): void;
+  emitMenuCommand(command: MenuCommand): void;
 };
 
 export function summaryFor(paths: string[]): FilesSummary {
@@ -34,9 +36,12 @@ export function createFakeApi(overrides: Partial<Api> = {}): FakeApi {
   const metadataListeners = new Set<(s: MetadataStatus) => void>();
   const progressListeners = new Set<(p: ProgressView) => void>();
   const openListeners = new Set<(p: string[]) => void>();
+  const fullScreenListeners = new Set<(on: boolean) => void>();
+  const menuListeners = new Set<(c: MenuCommand) => void>();
   const emitMetadata = (s: MetadataStatus) => metadataListeners.forEach((cb) => cb(s));
   const api: FakeApi = {
     platform: vi.fn(async () => 'darwin' as const),
+    platformSync: 'darwin',
     scan: vi.fn(async (paths: string[]) => summaryFor(paths)),
     buildPlan: vi.fn(async () => PLAN),
     tokenValues: vi.fn(async () => null),
@@ -65,6 +70,7 @@ export function createFakeApi(overrides: Partial<Api> = {}): FakeApi {
     fileDetails: vi.fn(async () => ({ size: 2_400_000, width: 4032, height: 3024, durationSeconds: null })),
     showInFolder: vi.fn(async () => {}),
     openFile: vi.fn(async () => null),
+    isFullScreen: vi.fn(async () => false),
     pathForFile: vi.fn((file: File) => `/dropped/${file.name}`),
     onMetadataProgress: vi.fn((cb: (s: MetadataStatus) => void) => {
       metadataListeners.add(cb);
@@ -84,9 +90,23 @@ export function createFakeApi(overrides: Partial<Api> = {}): FakeApi {
         openListeners.delete(cb);
       };
     }),
+    onFullScreen: vi.fn((cb: (on: boolean) => void) => {
+      fullScreenListeners.add(cb);
+      return () => {
+        fullScreenListeners.delete(cb);
+      };
+    }),
+    onMenuCommand: vi.fn((cb: (c: MenuCommand) => void) => {
+      menuListeners.add(cb);
+      return () => {
+        menuListeners.delete(cb);
+      };
+    }),
     emitMetadata,
     emitProgress: (p) => progressListeners.forEach((cb) => cb(p)),
     emitOpenPaths: (p) => openListeners.forEach((cb) => cb(p)),
+    emitFullScreen: (on) => fullScreenListeners.forEach((cb) => cb(on)),
+    emitMenuCommand: (c) => menuListeners.forEach((cb) => cb(c)),
     ...overrides,
   };
   return api;

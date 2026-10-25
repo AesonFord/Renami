@@ -40,7 +40,7 @@ import {
 import { Session } from './session.js';
 import { devRendererUrl, devUpdateFeed } from './devMode.js';
 import { APP_ORIGIN, APP_SCHEME, assetMime, resolveAppPath } from './appServer.js';
-import { menuTemplate } from './menu.js';
+import { aboutPanelOptions, menuTemplate } from './menu.js';
 import { appendLog, appendLogSync, crashLoopMessage, reloadLimiter } from './crash.js';
 import { progressFraction } from './progress.js';
 import { FEED_URL } from './updateCheck.js';
@@ -277,6 +277,7 @@ function registerIpc(s: Session): void {
   handle(INVOKE.takeOpenPaths, () => openPaths.take());
   handle(INVOKE.fileDetails, (p: unknown) => (typeof p === 'string' ? s.fileDetails(p) : null));
   handle(INVOKE.showInFolder, (p: unknown) => shell.showItemInFolder(batchFile(s, p)));
+  handle(INVOKE.isFullScreen, () => liveWindow()?.isFullScreen() ?? false);
   handle(INVOKE.openFile, async (p: unknown) => {
     const error = await shell.openPath(batchFile(s, p));
     return error === '' ? null : error;
@@ -333,6 +334,8 @@ function createWindow(devUrl: string | null): BrowserWindow {
     minWidth: 960,
     minHeight: 600,
     title: 'Renami',
+    // macOS: the files strip sits in the title bar beside the traffic lights (styles.css).
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 20, y: 19 } } : {}),
     backgroundColor: windowBackground(),
     webPreferences: {
       preload: path.join(import.meta.dirname, '../preload/index.cjs'),
@@ -343,6 +346,9 @@ function createWindow(devUrl: string | null): BrowserWindow {
       spellcheck: false,
     },
   });
+  // macOS hides the traffic lights in full screen; the page drops the room it keeps for them.
+  win.on('enter-full-screen', () => send(EVENTS.fullScreen, true));
+  win.on('leave-full-screen', () => send(EVENTS.fullScreen, false));
   // The app never opens other pages.
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (event) => event.preventDefault());
@@ -418,13 +424,20 @@ void app.whenReady().then(async () => {
   const buildMenu = (): void =>
     Menu.setApplicationMenu(
       Menu.buildFromTemplate(
-        menuTemplate(process.platform, devUrl !== null, {
-          autoCheck: updater.autoCheck,
-          checkNow: () => void updater.checkNow(true),
-          setAutoCheck: (on) => void updater.setAutoCheck(on).then(buildMenu),
-        }),
+        menuTemplate(
+          process.platform,
+          devUrl !== null,
+          {
+            autoCheck: updater.autoCheck,
+            checkNow: () => void updater.checkNow(true),
+            setAutoCheck: (on) => void updater.setAutoCheck(on).then(buildMenu),
+          },
+          // The page runs them, with the same guards as its buttons.
+          { run: (command) => send(EVENTS.menuCommand, command) },
+        ),
       ),
     );
+  app.setAboutPanelOptions(aboutPanelOptions(app.getVersion()));
   buildMenu();
   // Deny every Chromium permission (camera, mic, geolocation, notifications) except fullscreen:
   // that one is requestFullscreen(), which the preview panel's <video controls> button calls.

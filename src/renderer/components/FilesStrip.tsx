@@ -20,6 +20,26 @@ export interface FilesStripProps {
   children?: ReactNode;
 }
 
+/**
+ * How long a scan or metadata read runs before the strip says so. Quicker ones, like the rescan
+ * after each keystroke in the name filter, would only blink.
+ */
+export const STATUS_DELAY_MS = 400;
+
+/** True once `on` has stayed true for `ms`; false again as soon as it turns false. */
+function useAfterDelay(on: boolean, ms: number): boolean {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (!on) {
+      setShown(false);
+      return;
+    }
+    const timer = setTimeout(() => setShown(true), ms);
+    return () => clearTimeout(timer);
+  }, [on, ms]);
+  return shown;
+}
+
 /** The files strip: sources, add, Subfolders, extension filter, progress, presets. */
 export function FilesStrip(props: FilesStripProps) {
   const { sources, files, scanning, metadata } = props;
@@ -28,6 +48,7 @@ export function FilesStrip(props: FilesStripProps) {
   const addButtonRef = useRef<HTMLButtonElement>(null);
   /** Metadata progress while a read is still running, else null. */
   const reading = metadata !== null && !metadata.finished && metadata.total > 0 ? metadata : null;
+  const showStatus = useAfterDelay(scanning || reading !== null, STATUS_DELAY_MS);
   const unreadable = files?.unreadableFolders ?? [];
   const summaries = useMemo(() => new Map(files?.sources.map((s) => [s.path, s])), [files]);
 
@@ -128,25 +149,23 @@ export function FilesStrip(props: FilesStripProps) {
       <ExtensionFilter found={files?.extensionsFound ?? []} selected={props.filter.extensions} onChange={(extensions) => props.onFilter({ extensions })} />
       <span className="sep" />
       <FileFilter filter={props.filter} onChange={props.onFilter} />
-      {scanning && (
-        <span className="muted" role="status">
-          Looking for files…
-        </span>
-      )}
-      {reading && (
-        <span className="inline" role="status">
-          Reading file details {reading.done} of {reading.total}
-          <span className="progress" aria-hidden="true">
-            <span style={{ width: `${Math.round((reading.done / reading.total) * 100)}%` }} />
-          </span>
-        </span>
-      )}
       {unreadable.length > 0 && (
         <span className="text-warn" title={unreadable.join('\n')}>
           {unreadable.length === 1 ? "1 folder couldn't be opened" : `${unreadable.length} folders couldn't be opened`}
         </span>
       )}
-      <span className="spacer" />
+      {/* Fills the gap before the presets, and shrinks instead of wrapping the strip. */}
+      <span className="strip-status" role="status">
+        {showStatus && scanning && <span className="muted">Looking for files…</span>}
+        {showStatus && reading && (
+          <span className="inline">
+            Reading file details {reading.done} of {reading.total}
+            <span className="progress" aria-hidden="true">
+              <span style={{ width: `${Math.round((reading.done / reading.total) * 100)}%` }} />
+            </span>
+          </span>
+        )}
+      </span>
       {props.children}
     </section>
   );
