@@ -14,6 +14,8 @@ It runs on macOS, Windows and Linux, and reads photo, video and audio metadata w
 
 **Download:** https://aesonford.github.io/Renami/, or pick a version on the [Releases](https://github.com/AesonFord/Renami/releases) page.
 
+**Docs:** the [user guide](https://aesonford.github.io/Renami/help.html), [support](https://aesonford.github.io/Renami/support.html) and the [privacy policy](https://aesonford.github.io/Renami/privacy.html). The pages live in `site/`.
+
 ## Run it
 
 You need Node 22 or later (CI uses Node 24).
@@ -99,16 +101,40 @@ npm run dist   # installers for this OS: .dmg, NSIS .exe, or AppImage and .deb
 
 To test the packaged app, run `npm run pack`, then `RENAMI_PACKAGED=1 npx playwright test packaged`.
 
-The builds have no Developer ID or Authenticode signature:
+These are the direct-download builds. For the Mac App Store and Microsoft Store, see [App store builds](#app-store-builds).
+
+The direct-download builds have no Developer ID or Authenticode signature:
 - **macOS:** the app is ad-hoc signed but not notarized, so macOS blocks the first launch. Open System Settings, then Privacy & Security, and click "Open Anyway". On macOS 14 and earlier, right-click the app, then Open, is enough.
 - **Windows:** SmartScreen shows "More info", then "Run anyway".
 
 On Linux:
 - On Ubuntu 24.04 and later, AppArmor's limit on unprivileged user namespaces can stop the AppImage from starting. Install the `.deb` instead, or allow the AppImage with an AppArmor profile.
 
+## App store builds
+
+```bash
+npm run dist:store   # macOS: a Mac App Store .pkg (sandboxed); Windows: a Microsoft Store .appx
+```
+
+It builds from `electron-builder.store.yml`. Both it and `electron-builder.yml` extend `electron-builder.common.yml`, which holds what every build shares; the store config can't extend `electron-builder.yml` itself, because that one opts into ad-hoc signing and the store build must leave the identity unset so electron-builder finds the store certificate in your keychain (or takes `CSC_NAME`). Linux store builds don't come from here: Flathub and the Snap Store build from their own manifests, and `build/app.renami.metainfo.xml` is the listing they show. On Linux the script is not a store build.
+
+A store install knows itself at run time (`process.mas`, `process.windowsStore`, `FLATPAK_ID`, or `SNAP` with the app running from that folder; `src/main/distribution.ts`) and has no update check: no menu items, no request to GitHub. The store delivers updates. On Windows and Linux that also removes the Help menu, which only held the update items. The Mac App Store entitlements (`build/entitlements.mas.plist`) grant the sandbox and access to the files the user picks, and no network access, so that build makes no network requests at all, which is what the privacy policy says.
+
+Before a store takes the build you need:
+
+- **macOS:** an "Apple Distribution" (or "3rd Party Mac Developer Application") certificate and a "3rd Party Mac Developer Installer" certificate in the keychain, and a Mac App Store provisioning profile for `app.renami` saved as `build/embedded.provisionprofile` (git-ignored), with `provisioningProfile` uncommented in the config. Without a certificate the build stops at the signing step with an error, after leaving an unsigned `dist/mas-arm64/Renami.app` (`dist/mas/` on Intel) that is enough to inspect; the `.pkg` needs the certificates. The first run also downloads the Mac App Store variant of Electron. Upload the `.pkg` with Apple's Transporter.
+- **Windows:** the `identityName`, `publisher` and `publisherDisplayName` that Partner Center shows under Product identity, in place of the placeholders in the `appx` section. Build on Windows (the AppX tools come with the Windows SDK) and upload in Partner Center, which signs the package.
+- **A licence decision.** Renami is GPL-3.0-or-later, which the Free Software Foundation holds to be incompatible with Apple's and Microsoft's store terms. `docs/store/listing.md` lays out the options, along with the listing copy, privacy answers and reviewer notes for each store.
+
+Limits of the store build, as it stands:
+
+- ExifTool on macOS is a Perl script that runs with `/usr/bin/perl`, as a child of the sandboxed app. That is expected to work (the child inherits the sandbox), but it hasn't been exercised under a signed store build yet; check it first.
+- A destination folder saved in a preset (Move into folders, One folder) is reachable only in the session it was chosen in. After a relaunch the sandbox denies it until it is chosen again. The bookmarks entitlement is in place for a later version to keep it.
+- The Explorer context menu comes from the NSIS installer and isn't part of the AppX package.
+
 ## Updates
 
-The installed app asks `api.github.com` for the latest release at most once a day. The request sends only Renami's version, in the User-Agent. When a newer version is out, Renami offers to open its download. Installing it is up to you: the builds aren't signed, so Renami can't update itself.
+The installed app asks `api.github.com` for the latest release at most once a day. A copy installed from an app store never does: the store delivers updates, and the menu items below are absent. The request sends only Renami's version, in the User-Agent. When a newer version is out, Renami offers to open its download. Installing it is up to you: the builds aren't signed, so Renami can't update itself.
 
 To turn the daily check off, clear "Check for Updates Automatically". It's in the Renami menu on macOS and the Help menu on Windows and Linux. "Check for Updates…" in the same menu checks right away.
 

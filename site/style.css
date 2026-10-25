@@ -55,18 +55,17 @@ code { font-family: var(--font-mono); font-size: 0.92em; }
   clip-path: inset(50%); white-space: nowrap;
 }
 
-.hero, main, footer { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+.hero, main, footer, .topnav { max-width: 960px; margin: 0 auto; padding: 0 16px; }
 
 .hero { text-align: center; padding-top: 72px; padding-bottom: 40px; }
 .hero .logo { display: block; margin: 0 auto 12px; }
 .hero h1 { font-size: 44px; line-height: 1.1; margin: 0 0 12px; font-weight: 600; }
 .pitch { color: var(--text-2); max-width: 36em; margin: 0 auto 24px; }
 
-.example {
-  display: inline-block; text-align: left; max-width: 100%;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
-  padding: 12px 16px; margin-bottom: 28px; overflow-wrap: anywhere;
+.example, .page pre {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px;
 }
+.example { display: inline-block; text-align: left; max-width: 100%; margin-bottom: 28px; overflow-wrap: anywhere; }
 .example .pattern { color: var(--accent); }
 .example p { margin: 4px 0 0; color: var(--text-3); }
 .example p code { color: var(--text); }
@@ -111,3 +110,34 @@ footer {
   padding-top: 24px; padding-bottom: 48px; border-top: 1px solid var(--line);
   font-size: 14px; color: var(--text-3);
 }
+
+/* Text pages: help, support, privacy. */
+.topnav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding-top: 20px; font-size: 15px; }
+.topnav .home { display: flex; align-items: center; gap: 8px; margin-right: auto; color: var(--text); font-weight: 600; }
+.topnav a { color: var(--text-2); text-decoration: none; }
+.topnav a:hover, .topnav a[aria-current] { color: var(--accent); }
+@media (max-width: 480px) { .topnav { gap: 6px 14px; font-size: 14px; } }
+
+.page { max-width: 760px; padding-top: 40px; }
+.page h1 { font-size: 36px; line-height: 1.15; font-weight: 600; margin: 0 0 8px; }
+.page .lede { margin: 0 0 8px; }
+.page .meta { color: var(--text-3); font-size: 14px; margin: 0 0 40px; }
+.page section { margin-bottom: 44px; }
+.page h2 { font-size: 24px; }
+.page p, .page li { color: var(--text-2); }
+.page li { margin-bottom: 4px; }
+.page li strong, .page p strong { color: var(--text); }
+.page table { border-collapse: collapse; width: 100%; font-size: 15px; margin: 12px 0 16px; }
+.page th, .page td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.page th { color: var(--text-3); font-weight: 600; font-size: 13px; }
+/* Tokens and patterns wrap between words, never inside one: "{name" on one line and "}" on the next reads wrong. */
+.page td:first-child code { white-space: nowrap; }
+.page td + td code, .page p code, .page li code { overflow-wrap: anywhere; }
+.page pre { overflow-x: auto; font-size: 15px; line-height: 1.5; }
+.page kbd {
+  font-family: var(--font-sans); font-size: 13px; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border); border-bottom-width: 2px;
+  border-radius: 5px; padding: 1px 6px; white-space: nowrap;
+}
+.page .toc { columns: 2 14em; column-gap: 24px; padding-left: 1.2em; margin: 0 0 8px; }
+.page .toc li { break-inside: avoid; }

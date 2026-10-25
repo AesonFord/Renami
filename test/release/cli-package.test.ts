@@ -34,5 +34,5 @@ describe('forbiddenInputs', () => {
 });
 
 it('keeps the CLI bundle out of the desktop app', () => {
-  expect(readFileSync('electron-builder.yml', 'utf8')).toMatch(/^\s+- "!out\/cli\/\*\*"$/m);
+  expect(readFileSync('electron-builder.common.yml', 'utf8')).toMatch(/^\s+- "!out\/cli\/\*\*"$/m);
 });

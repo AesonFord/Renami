@@ -8,7 +8,7 @@ export const PLATFORMS = /** @type {const} */ (['mac', 'win', 'linux']);
 const readBase = () => readFileSync('electron-builder.yml', 'utf8');
 
 /** The indented body of a top-level `name:` section. */
-function section(yml, name, file) {
+export function section(yml, name, file) {
   // actions/checkout on windows-latest checks these configs out as CRLF (core.autocrlf=true, no
   // .gitattributes); normalize here, the one place every caller's text passes through, so a bare
   // \n match still finds the section whichever line ending the file came in with.
@@ -21,7 +21,7 @@ function section(yml, name, file) {
 }
 
 /** A top-level `key: value`, or a key inside a section's body. */
-function value(text, key) {
+export function value(text, key) {
   return text.match(new RegExp(`^\\s*${key}:\\s*"?([^"\\n]+?)"?\\s*$`, 'm'))?.[1];
 }
 

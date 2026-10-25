@@ -39,8 +39,9 @@ import {
 } from './quitGuard.js';
 import { Session } from './session.js';
 import { devRendererUrl, devUpdateFeed } from './devMode.js';
+import { isStoreInstall } from './distribution.js';
 import { APP_ORIGIN, APP_SCHEME, assetMime, resolveAppPath } from './appServer.js';
-import { aboutPanelOptions, menuTemplate } from './menu.js';
+import { aboutPanelOptions, menuTemplate, type UpdateMenu } from './menu.js';
 import { appendLog, appendLogSync, crashLoopMessage, reloadLimiter } from './crash.js';
 import { progressFraction } from './progress.js';
 import { FEED_URL } from './updateCheck.js';
@@ -409,17 +410,27 @@ function createWindow(devUrl: string | null): BrowserWindow {
 
 void app.whenReady().then(async () => {
   const devUrl = devRendererUrl(app.isPackaged, process.env);
-  const updater = new UpdateChecker({
-    currentVersion: app.getVersion(),
-    platform: process.platform,
-    arch: process.arch,
-    isAppImage: Boolean(process.env.APPIMAGE),
-    feedUrl: devUpdateFeed(app.isPackaged, process.env) ?? FEED_URL,
-    fetch: (url, init) => net.fetch(url, init),
-    prefsFile: path.join(app.getPath('userData'), 'updates.json'),
-    ui: updateUi(),
-  });
-  await updater.init();
+  // A store install has no update check at all: no checker, no menu items, no request to GitHub.
+  const updater = isStoreInstall(process)
+    ? null
+    : new UpdateChecker({
+        currentVersion: app.getVersion(),
+        platform: process.platform,
+        arch: process.arch,
+        isAppImage: Boolean(process.env.APPIMAGE),
+        feedUrl: devUpdateFeed(app.isPackaged, process.env) ?? FEED_URL,
+        fetch: (url, init) => net.fetch(url, init),
+        prefsFile: path.join(app.getPath('userData'), 'updates.json'),
+        ui: updateUi(),
+      });
+  await updater?.init();
+  const updateMenu: UpdateMenu | undefined = updater
+    ? {
+        autoCheck: updater.autoCheck,
+        checkNow: () => void updater.checkNow(true),
+        setAutoCheck: (on) => void updater.setAutoCheck(on).then(buildMenu),
+      }
+    : undefined;
   // Rebuilt when the checkbox changes, so the menu always shows the saved setting.
   const buildMenu = (): void =>
     Menu.setApplicationMenu(
@@ -427,11 +438,7 @@ void app.whenReady().then(async () => {
         menuTemplate(
           process.platform,
           devUrl !== null,
-          {
-            autoCheck: updater.autoCheck,
-            checkNow: () => void updater.checkNow(true),
-            setAutoCheck: (on) => void updater.setAutoCheck(on).then(buildMenu),
-          },
+          updateMenu,
           // The page runs them, with the same guards as its buttons.
           { run: (command) => send(EVENTS.menuCommand, command) },
         ),
@@ -444,7 +451,7 @@ void app.whenReady().then(async () => {
   webSession.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => callback(permission === 'fullscreen'));
   webSession.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === 'fullscreen');
   // The spellchecker downloads dictionaries from Google on Windows/Linux. The app makes no other
-  // network requests; the update check (updater.ts) is the one exception.
+  // network requests; the update check (updater.ts), absent from store installs, is the one exception.
   webSession.defaultSession.spellCheckerEnabled = false;
   // Installing these replaces Electron's default error dialog: log first, then still tell the user.
   process.on('uncaughtException', (error) => {
@@ -494,7 +501,7 @@ void app.whenReady().then(async () => {
   });
   mainWindow = createWindow(devUrl);
   // Packaged builds only; CI sets RENAMI_NO_UPDATE_CHECK so launches there stay off the network.
-  if (app.isPackaged && process.env.RENAMI_NO_UPDATE_CHECK !== '1') updater.startAuto(10_000);
+  if (updater && app.isPackaged && process.env.RENAMI_NO_UPDATE_CHECK !== '1') updater.startAuto(10_000);
   openPaths.add(pathsFromArgv(process.argv, app.isPackaged, process.cwd()));
   // The page follows the OS color mode through prefers-color-scheme; the window has to be told.
   nativeTheme.on('updated', () => {
