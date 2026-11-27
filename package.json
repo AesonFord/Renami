@@ -35,7 +35,7 @@
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "@playwright/test": "^1.64.1",
-    "@tanstack/react-virtual": "^3.14.24",
+    "@tanstack/react-virtual": "^3.14.26",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
@@ -45,7 +45,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^5.0.5",
     "builder-util-runtime": "9.7.0",
-    "electron": "45.2.1",
+    "electron": "45.3.2",
     "electron-builder": "^26.18.0",
     "electron-vite": "6.0.0",
     "esbuild": "0.28.2",
@@ -55,7 +55,7 @@
     "react-dom": "^19.3.1",
     "rollup": "4.67.3",
     "typescript": "^7.0.2",
-    "vite": "^7.3.7",
+    "vite": "^7.3.8",
     "vitest": "^5.0.3"
   },
   "overrides": {
