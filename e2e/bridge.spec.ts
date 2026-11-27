@@ -188,14 +188,21 @@ test('exercises presets, clipboard, token values, cancel and execute progress', 
   // Nothing is running, so this just resolves.
   await win.evaluate(() => (globalThis as unknown as { api: Api }).api.cancel());
 
-  const events = await win.evaluate((planId) => {
+  // Electron doesn't order webContents.send messages against invoke replies, so the final
+  // progress event can land just after execute() resolves. Wait briefly for it.
+  const events = await win.evaluate(async (planId) => {
     const api = (globalThis as unknown as { api: Api }).api;
     const seen: { done: number; total: number }[] = [];
-    const off = api.onExecuteProgress((p) => seen.push(p));
-    return api.execute(planId).then(() => {
-      off();
-      return seen;
+    let finished: () => void = () => {};
+    const final = new Promise<void>((resolve) => (finished = resolve));
+    const off = api.onExecuteProgress((p) => {
+      seen.push(p);
+      if (p.done === p.total) finished();
     });
+    await api.execute(planId);
+    await Promise.race([final, new Promise((resolve) => setTimeout(resolve, 2000))]);
+    off();
+    return seen;
   }, plan.planId);
   expect(events.length).toBeGreaterThan(0);
   const last = events.at(-1);
