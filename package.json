@@ -61,6 +61,8 @@
   "overrides": {
     "app-builder-lib": {
       "@electron/get": "^5.1.0"
-    }
+    },
+    "minimatch@^9.0.0": "^11.0.9",
+    "minimatch@^10.0.0": "^11.0.9"
   }
 }
